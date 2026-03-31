@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 const ROLES = ["USER", "ADMIN", "MANAGER", "TECHNICIAN"];
 
@@ -11,15 +12,26 @@ const roleBadge = {
 };
 
 const UserManagement = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("All");
-  const [editingUser, setEditingUser] = useState(null); // Full user object for the modal
+  const [editingUser, setEditingUser] = useState(null);
   const [pendingRole, setPendingRole] = useState("");
   const [deleteId, setDeleteId] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // ── Add-user modal state ────────────────────────────────────────
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newUser, setNewUser] = useState({ name: "", email: "", role: "USER" });
+  const [addErrors, setAddErrors] = useState({});
+  const [addLoading, setAddLoading] = useState(false);
+
+  // ── Generated-password notification state ───────────────────────
+  const [passwordNotif, setPasswordNotif] = useState(null); // { email, password }
+  const [copied, setCopied] = useState(false);
 
   // ── Fetch all users ──────────────────────────────────────────────
   const fetchUsers = async () => {
@@ -76,6 +88,66 @@ const UserManagement = () => {
     }
   };
 
+  // ── Add user ─────────────────────────────────────────────────────
+  const validateAddForm = () => {
+    const errs = {};
+    if (!newUser.name.trim()) errs.name = "Name is required";
+    if (!newUser.email.trim()) {
+      errs.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newUser.email)) {
+      errs.email = "Please enter a valid email address";
+    }
+    setAddErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleAddUser = async () => {
+    if (!validateAddForm()) return;
+    try {
+      setAddLoading(true);
+      const res = await api.post("/admin/users", {
+        name: newUser.name.trim(),
+        email: newUser.email.trim(),
+        role: newUser.role,
+      });
+
+      // Close modal, reset form
+      setShowAddModal(false);
+      setNewUser({ name: "", email: "", role: "USER" });
+      setAddErrors({});
+
+      // Show password notification
+      setPasswordNotif({
+        email: res.data.email,
+        password: res.data.generatedPassword,
+      });
+      setCopied(false);
+
+      // Refresh user list
+      fetchUsers();
+    } catch (err) {
+      if (err.response?.status === 409) {
+        setAddErrors({ email: "A user with this email already exists" });
+      } else {
+        setAddErrors({
+          general:
+            err.response?.data?.message ||
+            "Failed to create user. Please try again.",
+        });
+      }
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const handleCopyPassword = () => {
+    if (passwordNotif?.password) {
+      navigator.clipboard.writeText(passwordNotif.password);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   // ── Filtering ────────────────────────────────────────────────────
   const filtered = users.filter((u) => {
     const matchesSearch =
@@ -98,6 +170,57 @@ const UserManagement = () => {
 
   return (
     <div className="p-6">
+      {/* ── Password Notification Banner ──────────────────────────── */}
+      {passwordNotif && (
+        <div className="fixed top-6 right-6 z-[100] w-full max-w-md animate-slide-in">
+          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl shadow-2xl shadow-emerald-100/60 p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg">
+                🔑
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-emerald-800 mb-1">
+                  User Created Successfully!
+                </h3>
+                <p className="text-xs text-emerald-600 mb-3">
+                  A temporary password has been generated for{" "}
+                  <strong>{passwordNotif.email}</strong>. Please share this
+                  password with the user securely.
+                </p>
+
+                {/* Password display box */}
+                <div className="bg-white border border-emerald-200 rounded-xl p-3 flex items-center gap-2">
+                  <code className="flex-1 text-base font-mono font-bold text-slate-800 tracking-wider select-all">
+                    {passwordNotif.password}
+                  </code>
+                  <button
+                    onClick={handleCopyPassword}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      copied
+                        ? "bg-emerald-500 text-white"
+                        : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                    }`}
+                  >
+                    {copied ? "✓ Copied" : "Copy"}
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-amber-600 mt-2 font-medium">
+                  ⚠ This password will not be shown again. Make sure to note it
+                  down before closing.
+                </p>
+              </div>
+              <button
+                onClick={() => setPasswordNotif(null)}
+                className="text-slate-400 hover:text-slate-600 text-lg leading-none p-1"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -106,12 +229,20 @@ const UserManagement = () => {
             {loading ? "Loading…" : `${users.length} total users`}
           </p>
         </div>
-        <button
-          onClick={fetchUsers}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm flex items-center gap-2"
-        >
-          ↻ Refresh
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2 active:scale-95"
+          >
+            <span className="text-lg leading-none">+</span> Add User
+          </button>
+          <button
+            onClick={fetchUsers}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm flex items-center gap-2"
+          >
+            ↻ Refresh
+          </button>
+        </div>
       </div>
 
       {/* Error banner */}
@@ -167,9 +298,16 @@ const UserManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((user) => (
+              {filtered.map((user) => {
+                // Match by email (works for all login methods incl. Google OAuth)
+                // Fall back to id comparison only when both sides have an id
+                const isSelf = currentUser &&
+                  (user.email === currentUser.email ||
+                    (currentUser.id && user.id && user.id === currentUser.id));
+
+                return (
                 <tr
-                  key={user.id}
+                  key={user.id ?? user.email}
                   className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
                 >
                   {/* User info */}
@@ -179,8 +317,13 @@ const UserManagement = () => {
                         {initials(user.name)}
                       </div>
                       <div>
-                        <p className="text-slate-800 font-semibold text-sm">
+                        <p className="text-slate-800 font-semibold text-sm flex items-center gap-2">
                           {user.name || "—"}
+                          {isSelf && (
+                            <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-600 text-[10px] font-bold rounded-md tracking-wide">
+                              You
+                            </span>
+                          )}
                         </p>
                         <p className="text-slate-500 text-xs">{user.email}</p>
                       </div>
@@ -200,28 +343,159 @@ const UserManagement = () => {
 
                   {/* Actions */}
                   <td className="p-4 text-right whitespace-nowrap">
-                    <button
-                      onClick={() => {
-                        setEditingUser(user);
-                        setPendingRole(user.role);
-                      }}
-                      className="text-indigo-600 hover:text-indigo-800 text-sm font-medium mr-4"
-                    >
-                      Edit Role
-                    </button>
-                    <button
-                      onClick={() => setDeleteId(user.id)}
-                      className="text-rose-500 hover:text-rose-700 text-sm font-medium"
-                    >
-                      Delete
-                    </button>
+                    {isSelf ? (
+                      <span
+                        className="text-slate-300 text-xs italic select-none"
+                        title="You cannot modify your own account"
+                      >
+                        — own account —
+                      </span>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingUser(user);
+                            setPendingRole(user.role);
+                          }}
+                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium mr-4"
+                        >
+                          Edit Role
+                        </button>
+                        <button
+                          onClick={() => setDeleteId(user.id)}
+                          className="text-rose-500 hover:text-rose-700 text-sm font-medium"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
+
+      {/* ── Add User Modal ──────────────────────────────────────────── */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 border border-slate-100">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-11 h-11 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl">
+                👤
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">
+                  Add New User
+                </h2>
+                <p className="text-slate-500 text-xs">
+                  A random password will be generated automatically
+                </p>
+              </div>
+            </div>
+
+            {/* General error */}
+            {addErrors.general && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-700 text-sm">
+                {addErrors.general}
+              </div>
+            )}
+
+            {/* Name field */}
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={newUser.name}
+                onChange={(e) =>
+                  setNewUser((p) => ({ ...p, name: e.target.value }))
+                }
+                placeholder="e.g. John Doe"
+                className={`w-full px-4 py-2.5 bg-white border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 ${
+                  addErrors.name
+                    ? "border-rose-300 bg-rose-50/30"
+                    : "border-slate-200"
+                }`}
+              />
+              {addErrors.name && (
+                <p className="text-rose-500 text-xs mt-1">{addErrors.name}</p>
+              )}
+            </div>
+
+            {/* Email field */}
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={newUser.email}
+                onChange={(e) =>
+                  setNewUser((p) => ({ ...p, email: e.target.value }))
+                }
+                placeholder="e.g. user@university.edu"
+                className={`w-full px-4 py-2.5 bg-white border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 ${
+                  addErrors.email
+                    ? "border-rose-300 bg-rose-50/30"
+                    : "border-slate-200"
+                }`}
+              />
+              {addErrors.email && (
+                <p className="text-rose-500 text-xs mt-1">{addErrors.email}</p>
+              )}
+            </div>
+
+            {/* Role selection */}
+            <div className="mb-6">
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Assign Role
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {ROLES.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setNewUser((p) => ({ ...p, role: r }))}
+                    className={`px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
+                      newUser.role === r
+                        ? "bg-emerald-50 border-emerald-500 text-emerald-700 ring-2 ring-emerald-500/10"
+                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  setNewUser({ name: "", email: "", role: "USER" });
+                  setAddErrors({});
+                }}
+                className="px-4 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
+                disabled={addLoading}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={addLoading}
+                onClick={handleAddUser}
+                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-all shadow-md shadow-emerald-200 active:scale-95"
+              >
+                {addLoading ? "Creating…" : "Create User"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Role Modal */}
       {editingUser && (
@@ -313,6 +587,23 @@ const UserManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Slide-in animation style */}
+      <style>{`
+        @keyframes slide-in {
+          from {
+            opacity: 0;
+            transform: translateX(100%) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+          }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-package com.project.paf.model;
+package com.project.paf.modules.auth.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;

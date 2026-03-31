@@ -1,15 +1,19 @@
-package com.project.paf.controller;
+package com.project.paf.modules.auth.controller;
 
-import com.project.paf.model.Role;
-import com.project.paf.model.User;
-import com.project.paf.repository.UserRepository;
+import com.project.paf.modules.auth.model.Role;
+import com.project.paf.modules.auth.model.User;
+import com.project.paf.modules.auth.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.security.SecureRandom;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -17,9 +21,11 @@ import java.util.List;
 public class AdminController {
 
     private final UserRepository repo;
+    private final PasswordEncoder encoder;
 
-    public AdminController(UserRepository repo) {
+    public AdminController(UserRepository repo, PasswordEncoder encoder) {
         this.repo = repo;
+        this.encoder = encoder;
     }
 
     /**
@@ -89,5 +95,60 @@ public class AdminController {
         requireAdmin(session, emailHeader);
         repo.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── CREATE user (admin) ───────────────────────────────────────────────────
+    @PostMapping("/users")
+    public ResponseEntity<Map<String, Object>> createUser(
+            @RequestBody Map<String, String> body,
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
+
+        requireAdmin(session, emailHeader);
+
+        String name  = body.get("name");
+        String email = body.get("email");
+        String role  = body.get("role");
+
+        if (name == null || name.isBlank() || email == null || email.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name and email are required");
+        }
+
+        // Check duplicate email
+        if (repo.findByEmail(email).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A user with this email already exists");
+        }
+
+        // Generate a secure random password
+        String plainPassword = generateRandomPassword(10);
+
+        User user = new User();
+        user.setName(name);
+        user.setEmail(email);
+        user.setPassword(encoder.encode(plainPassword));
+        user.setRole(role != null ? Role.valueOf(role) : Role.USER);
+
+        User saved = repo.save(user);
+
+        // Return saved user info + the plain-text password (shown once to admin)
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("id", saved.getId());
+        response.put("name", saved.getName());
+        response.put("email", saved.getEmail());
+        response.put("role", saved.getRole().name());
+        response.put("generatedPassword", plainPassword);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /** Generates a random alphanumeric password of the given length. */
+    private String generateRandomPassword(int length) {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$!";
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 }

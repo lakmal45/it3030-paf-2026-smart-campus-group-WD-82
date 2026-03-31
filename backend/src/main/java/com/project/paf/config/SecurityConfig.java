@@ -1,6 +1,6 @@
 package com.project.paf.config;
 
-import com.project.paf.repository.UserRepository;
+import com.project.paf.modules.auth.repository.UserRepository;
 import com.project.paf.service.OAuth2LoginSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
