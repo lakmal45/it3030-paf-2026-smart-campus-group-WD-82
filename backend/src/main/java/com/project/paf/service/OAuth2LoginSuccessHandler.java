@@ -1,8 +1,8 @@
 package com.project.paf.service;
 
-import com.project.paf.model.Role;
-import com.project.paf.model.User;
-import com.project.paf.repository.UserRepository;
+import com.project.paf.modules.auth.model.Role;
+import com.project.paf.modules.auth.model.User;
+import com.project.paf.modules.auth.repository.UserRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -40,7 +40,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             user = new User();
             user.setEmail(email);
             user.setName(name);
-            user.setPassword("GOOGLE_USER");
+            user.setPassword(null); // Google users have no local password
 
             // default role
             user.setRole(Role.USER);

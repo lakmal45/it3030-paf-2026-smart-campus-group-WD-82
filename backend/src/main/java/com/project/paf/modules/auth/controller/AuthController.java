@@ -1,6 +1,6 @@
-package com.project.paf.controller;
+package com.project.paf.modules.auth.controller;
 
-import com.project.paf.model.User;
+import com.project.paf.modules.auth.model.User;
 import com.project.paf.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.*;

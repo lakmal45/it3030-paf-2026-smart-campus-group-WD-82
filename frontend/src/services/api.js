@@ -8,4 +8,21 @@ const api = axios.create({
   },
 });
 
+// Attach the stored user's email on every request so the backend
+// can identify the caller even when the Spring session has expired.
+api.interceptors.request.use((config) => {
+  try {
+    const raw = localStorage.getItem("user");
+    if (raw) {
+      const user = JSON.parse(raw);
+      if (user?.email) {
+        config.headers["X-User-Email"] = user.email;
+      }
+    }
+  } catch (_) {
+    // ignore JSON parse errors
+  }
+  return config;
+});
+
 export default api;

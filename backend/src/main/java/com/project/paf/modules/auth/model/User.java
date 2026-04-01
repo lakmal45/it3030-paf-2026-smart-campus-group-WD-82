@@ -1,4 +1,4 @@
-package com.project.paf.model;
+package com.project.paf.modules.auth.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -19,6 +19,7 @@ public class User {
     @Column(unique = true)
     private String email;
 
+    @Column(nullable = true)
     private String password;
 
     @Enumerated(EnumType.STRING)
