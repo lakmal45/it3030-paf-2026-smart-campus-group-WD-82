@@ -1,8 +1,8 @@
 package com.project.paf.service;
 
-import com.project.paf.modules.auth.model.Role;
-import com.project.paf.modules.auth.model.User;
-import com.project.paf.modules.auth.repository.UserRepository;
+import com.project.paf.modules.user.model.Role;
+import com.project.paf.modules.user.model.User;
+import com.project.paf.modules.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 

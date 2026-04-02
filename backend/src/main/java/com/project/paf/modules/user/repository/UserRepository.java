@@ -1,7 +1,7 @@
-package com.project.paf.modules.auth.repository;
+package com.project.paf.modules.user.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import com.project.paf.modules.auth.model.User;
+import com.project.paf.modules.user.model.User;
 
 import java.util.Optional;
 
