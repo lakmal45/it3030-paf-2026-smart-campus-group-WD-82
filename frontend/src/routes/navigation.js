@@ -12,6 +12,7 @@ import {
   Wrench,
   CheckSquare,
   History,
+  Box,
 } from "lucide-react";
 
 export const roleNavigation = {
@@ -25,6 +26,7 @@ export const roleNavigation = {
     },
     { name: "My Tickets", path: "/dashboard/user/tickets", icon: Ticket },
     { name: "Profile", path: "/dashboard/user/profile", icon: User },
+    { name: "Resources", path: "/dashboard/user/resources", icon: Box },
   ],
   ADMIN: [
     { name: "Dashboard", path: "/dashboard/admin", icon: LayoutDashboard },
@@ -35,6 +37,7 @@ export const roleNavigation = {
       path: "/dashboard/admin/settings",
       icon: Settings,
     },
+    { name: "Resources", path: "/dashboard/admin/resources", icon: Box },
   ],
   MANAGER: [
     { name: "Dashboard", path: "/dashboard/manager", icon: LayoutDashboard },
@@ -45,6 +48,7 @@ export const roleNavigation = {
       icon: BarChart,
     },
     { name: "Maintenance", path: "/dashboard/manager/maintenance", icon: Wrench },
+    { name: "Resources", path: "/dashboard/manager/resources", icon: Box },
   ],
   TECHNICIAN: [
     { name: "Dashboard", path: "/dashboard/technician", icon: LayoutDashboard },
