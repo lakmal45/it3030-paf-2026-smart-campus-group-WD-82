@@ -19,7 +19,8 @@ api.interceptors.request.use((config) => {
         config.headers["X-User-Email"] = user.email;
       }
     }
-  } catch (_) {
+  } catch (err) {
+    void err; 
     // ignore JSON parse errors
   }
   return config;
