@@ -29,23 +29,13 @@ public class ResourceController {
     }
 
     @GetMapping
-    public List<ResourceResponseDTO> getResources(
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String location,
-            @RequestParam(required = false) Integer minCapacity,
-            @RequestParam(required = false) Boolean available
-    ) {
-        boolean hasAnyFilter = name != null || type != null || location != null || minCapacity != null || available != null;
-        if (hasAnyFilter) {
-            return resourceService.getFilteredResources(name, type, location, minCapacity, available);
-        }
-        return resourceService.getAllResources();
+    public ResponseEntity<List<ResourceResponseDTO>> getAllResources() {
+        return ResponseEntity.ok(resourceService.getAllResources());
     }
 
     @GetMapping("/{id}")
-    public ResourceResponseDTO getResourceById(@PathVariable Long id) {
-        return resourceService.getResourceById(id);
+    public ResponseEntity<ResourceResponseDTO> getResourceById(@PathVariable Long id) {
+        return ResponseEntity.ok(resourceService.getResourceById(id));
     }
 
     @PostMapping
@@ -55,13 +45,23 @@ public class ResourceController {
     }
 
     @PutMapping("/{id}")
-    public ResourceResponseDTO updateResource(@PathVariable Long id, @Valid @RequestBody ResourceRequestDTO requestDTO) {
-        return resourceService.updateResource(id, requestDTO);
+    public ResponseEntity<ResourceResponseDTO> updateResource(@PathVariable Long id, @Valid @RequestBody ResourceRequestDTO requestDTO) {
+        return ResponseEntity.ok(resourceService.updateResource(id, requestDTO));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteResource(@PathVariable Long id) {
         resourceService.deleteResource(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<ResourceResponseDTO>> searchResources(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) Integer capacity
+    ) {
+        // Mapping capacity to minCapacity as expected by the service/repository
+        return ResponseEntity.ok(resourceService.getFilteredResources(null, type, location, capacity, null));
     }
 }
