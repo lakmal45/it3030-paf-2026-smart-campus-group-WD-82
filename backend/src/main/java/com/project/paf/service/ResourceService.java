@@ -4,6 +4,7 @@ import com.project.paf.dto.ResourceRequestDTO;
 import com.project.paf.dto.ResourceResponseDTO;
 import com.project.paf.exception.ResourceNotFoundException;
 import com.project.paf.model.Resource;
+import com.project.paf.model.ResourceStatus;
 import com.project.paf.repository.ResourceRepository;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Service;
@@ -26,18 +27,19 @@ public class ResourceService {
                 .toList();
     }
 
-        public List<ResourceResponseDTO> getFilteredResources(
+    public List<ResourceResponseDTO> getFilteredResources(
             String name,
             String type,
             String location,
             Integer minCapacity,
             Boolean available
-        ) {
+    ) {
+        // Updated service to use repository filtering
         return resourceRepository.findByFilters(name, type, location, minCapacity, available)
-            .stream()
-            .map(this::toResponseDTO)
-            .toList();
-        }
+                .stream()
+                .map(this::toResponseDTO)
+                .toList();
+    }
 
     public ResourceResponseDTO getResourceById(Long id) {
         Resource resource = resourceRepository.findById(id)
