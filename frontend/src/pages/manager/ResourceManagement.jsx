@@ -65,6 +65,7 @@ const ResourceManagement = () => {
         await resourceService.deleteResource(id);
         fetchResources();
       } catch (err) {
+        void err;
         setError("Failed to delete resource.");
       }
     }

@@ -15,6 +15,7 @@ const ResourceForm = ({ resource, onSubmit, onCancel, errors: serverErrors }) =>
 
   useEffect(() => {
     if (resource) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         name: resource.name || "",
         type: resource.type || "Room",

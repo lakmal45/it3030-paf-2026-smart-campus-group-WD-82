@@ -9,7 +9,7 @@ const Dashboard = () => {
     if (!localStorage.getItem("user")) {
       navigate("/login");
     }
-  }, []);
+  }, [navigate]);
 
   const logout = () => {
     localStorage.removeItem("user");

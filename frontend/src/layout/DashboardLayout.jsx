@@ -27,8 +27,11 @@ const DashboardLayout = () => {
 
   // Close mobile menu when route changes
   useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location.pathname]);
+    if (isMobileMenuOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsMobileMenuOpen(false);
+    }
+  }, [location.pathname, isMobileMenuOpen]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex overflow-hidden font-sans selection:bg-indigo-500/30">
