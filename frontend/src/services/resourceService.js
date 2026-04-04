@@ -7,7 +7,7 @@ const resourceService = {
   },
 
   getFilteredResources: async (filters) => {
-    const response = await api.get("/resources", { params: filters });
+    const response = await api.get("/resources/search", { params: filters });
     return response.data;
   },
 
