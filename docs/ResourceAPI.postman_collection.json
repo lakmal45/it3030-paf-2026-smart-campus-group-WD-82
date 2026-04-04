@@ -1,0 +1,166 @@
+{
+	"info": {
+		"_postman_id": "3ea48e90-9702-4a11-a777-35718654d59b",
+		"name": "Smart Campus - Resource Management API",
+		"description": "API collection for testing Smart Campus Resource Management endpoints with Security and Validation.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get All Resources",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/resources",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"resources"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Resource By ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/resources/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"resources",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Search Resources",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/resources/search?type=Room&location=Building A&capacity=20",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"resources",
+						"search"
+					],
+					"query": [
+						{
+							"key": "type",
+							"value": "Room"
+						},
+						{
+							"key": "location",
+							"value": "Building A"
+						},
+						{
+							"key": "capacity",
+							"value": "20"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Resource (Admin Only)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Smart Lab 202\",\n    \"type\": \"Lab\",\n    \"location\": \"Building C\",\n    \"capacity\": 40,\n    \"available\": true,\n    \"status\": \"ACTIVE\",\n    \"description\": \"Advanced computer lab with high-end workstations.\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/resources",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"resources"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Resource (Admin Only)",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Smart Lab 202 Updated\",\n    \"type\": \"Lab\",\n    \"location\": \"Building C\",\n    \"capacity\": 45,\n    \"available\": true,\n    \"status\": \"IN_MAINTENANCE\",\n    \"description\": \"Upgraded cooling system and new server rack.\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/resources/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"resources",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Resource (Admin Only)",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/resources/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"resources",
+						"1"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
