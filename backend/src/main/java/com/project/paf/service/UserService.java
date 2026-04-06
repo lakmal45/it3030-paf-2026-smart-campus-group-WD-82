@@ -1,8 +1,8 @@
 package com.project.paf.service;
 
-import com.project.paf.modules.auth.model.Role;
-import com.project.paf.modules.auth.model.User;
-import com.project.paf.modules.auth.repository.UserRepository;
+import com.project.paf.modules.user.model.Role;
+import com.project.paf.modules.user.model.User;
+import com.project.paf.modules.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -42,4 +42,23 @@ public class UserService {
 
         return user;
     }
-}
+
+    public User updateUser(Long id, User updateData) {
+        User user = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        if (updateData.getName() != null) user.setName(updateData.getName());
+        if (updateData.getProfileImageUrl() != null) user.setProfileImageUrl(updateData.getProfileImageUrl());
+        return repo.save(user);
+    }
+
+    public void changePassword(Long id, String oldPassword, String newPassword) {
+        User user = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getPassword() == null) throw new RuntimeException("Google users cannot change password");
+        if (!encoder.matches(oldPassword, user.getPassword())) throw new RuntimeException("Old password incorrect");
+        user.setPassword(encoder.encode(newPassword));
+        repo.save(user);
+    }
+
+    public void deleteUser(Long id) {
+        repo.deleteById(id);
+    }
+}

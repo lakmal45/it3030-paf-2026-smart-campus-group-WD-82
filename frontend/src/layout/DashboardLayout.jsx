@@ -1,24 +1,47 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState, useRef, useEffect } from "react";
-import { Menu, X, LogOut, User, Settings, ChevronDown, Bell, LayoutDashboard, Search, HelpCircle } from "lucide-react";
+import { Menu, X, LogOut, User, Settings, ChevronDown, Bell, LayoutDashboard, Search, HelpCircle, CheckCircle2, AlertCircle, Info, AlertTriangle, CheckCheck } from "lucide-react";
 import { roleNavigation } from "../routes/navigation";
 
 const DashboardLayout = () => {
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const profileDropdownRef = useRef(null);
+  const notificationsDropdownRef = useRef(null);
+  
+  // Mock notifications
+  const [notifications, setNotifications] = useState([
+    { id: 1, title: "New Assignment", message: "Mathematics Assignment 3 is now available.", time: "2m ago", type: "info", isRead: false },
+    { id: 2, title: "Booking Confirmed", message: "Study Room 102 booking is confirmed for 2 PM.", time: "1h ago", type: "success", isRead: false },
+    { id: 3, title: "Reminder", message: "Your Library book 'Introduction to AI' is due in 2 days.", time: "5h ago", type: "warning", isRead: false },
+    { id: 4, title: "System Update", message: "Smart Campus Portal will be down for maintenance tonight at 12 AM.", time: "1d ago", type: "alert", isRead: true },
+  ]);
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const markAllAsRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+  };
+
+  const markAsRead = (id) => {
+    setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
+  };
   const location = useLocation();
 
   const userRole = user?.role?.toUpperCase() || "USER";
   const navigationLinks = roleNavigation[userRole] || roleNavigation.USER;
 
-  // Close profile dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
         setIsProfileOpen(false);
+      }
+      if (notificationsDropdownRef.current && !notificationsDropdownRef.current.contains(event.target)) {
+        setIsNotificationsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -110,8 +133,12 @@ const DashboardLayout = () => {
         {/* Bottom Sidebar area */}
         <div className="p-4 border-t border-slate-100/80 mt-auto bg-slate-50/50">
            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-100 shadow-sm cursor-pointer hover:border-indigo-200 hover:shadow-md transition-all">
-               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-100 to-purple-100 text-indigo-700 flex items-center justify-center font-bold">
-                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
+               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-100 to-purple-100 text-indigo-700 flex items-center justify-center font-bold overflow-hidden shadow-inner border border-white">
+                  {user?.profileImageUrl ? (
+                    <img src={user.profileImageUrl} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    user?.name?.charAt(0)?.toUpperCase() || "U"
+                  )}
                </div>
                <div className="flex flex-col flex-1 min-w-0">
                   <span className="text-sm font-semibold text-slate-800 truncate">
@@ -161,10 +188,98 @@ const DashboardLayout = () => {
                 <button className="p-2.5 text-slate-500 hover:text-indigo-600 bg-white/80 backdrop-blur-sm hover:bg-white border border-slate-200/80 rounded-full shadow-sm hover:shadow transition-all relative">
                     <HelpCircle size={18} />
                 </button>
-                <button className="p-2.5 text-slate-500 hover:text-indigo-600 bg-white/80 backdrop-blur-sm hover:bg-white border border-slate-200/80 rounded-full shadow-sm hover:shadow transition-all relative">
-                    <Bell size={18} />
-                    <span className="absolute top-2 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white animate-pulse"></span>
-                </button>
+                {/* Notifications */}
+                <div className="relative" ref={notificationsDropdownRef}>
+                  <button 
+                    onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                    className={`p-2.5 hover:text-indigo-600 bg-white/80 backdrop-blur-sm hover:bg-white border border-slate-200/80 rounded-full shadow-sm hover:shadow transition-all relative group ${isNotificationsOpen ? "text-indigo-600 ring-2 ring-indigo-500/20 border-indigo-400" : "text-slate-500"}`}
+                  >
+                      <Bell size={18} className={`${unreadCount > 0 ? "animate-swing" : ""}`} />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-2 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white animate-pulse"></span>
+                      )}
+                  </button>
+
+                  {/* Notifications Dropdown */}
+                  <div 
+                    className={`absolute right-0 mt-3 w-80 sm:w-96 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_10px_40px_rgb(0,0,0,0.08)] border border-slate-100 py-2 z-50 transform origin-top-right transition-all duration-300 ${
+                      isNotificationsOpen ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 -translate-y-2 pointer-events-none"
+                    }`}
+                  >
+                    <div className="px-4 py-3 border-b border-slate-100/80 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-800">Notifications</h3>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">You have {unreadCount} unread messages</p>
+                      </div>
+                      {unreadCount > 0 && (
+                        <button 
+                          onClick={markAllAsRead}
+                          className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors bg-indigo-50 px-2 py-1 rounded-lg"
+                        >
+                          <CheckCheck size={12} />
+                          MARK ALL READ
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+                      {notifications.length > 0 ? (
+                        <div className="divide-y divide-slate-50">
+                          {notifications.map((notification) => {
+                            const getIcon = () => {
+                              switch(notification.type) {
+                                case 'success': return <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><CheckCircle2 size={16} /></div>;
+                                case 'warning': return <div className="p-2 bg-amber-50 text-amber-600 rounded-xl"><AlertTriangle size={16} /></div>;
+                                case 'alert': return <div className="p-2 bg-rose-50 text-rose-600 rounded-xl"><AlertCircle size={16} /></div>;
+                                default: return <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><Info size={16} /></div>;
+                              }
+                            };
+
+                            return (
+                              <div 
+                                key={notification.id} 
+                                className={`p-4 hover:bg-slate-50 transition-all cursor-pointer group relative ${!notification.isRead ? "bg-indigo-50/30" : ""}`}
+                                onClick={() => markAsRead(notification.id)}
+                              >
+                                {!notification.isRead && (
+                                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-r-md"></div>
+                                )}
+                                <div className="flex gap-4">
+                                  {getIcon()}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <h4 className={`text-sm font-bold truncate ${notification.isRead ? "text-slate-700" : "text-indigo-900"}`}>
+                                        {notification.title}
+                                      </h4>
+                                      <span className="text-[10px] font-medium text-slate-400 whitespace-nowrap">{notification.time}</span>
+                                    </div>
+                                    <p className={`text-xs mt-1 leading-relaxed ${notification.isRead ? "text-slate-500 line-clamp-2" : "text-slate-600 font-medium line-clamp-2"}`}>
+                                      {notification.message}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="py-12 flex flex-col items-center justify-center text-center px-6">
+                           <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 text-slate-300">
+                              <Bell size={32} />
+                           </div>
+                           <h4 className="text-sm font-bold text-slate-800">No Notifications Yet</h4>
+                           <p className="text-xs text-slate-500 mt-1">We'll alert you when there's something new happening on campus.</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="p-2 border-t border-slate-100/80">
+                      <button className="w-full py-2 text-xs font-bold text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all">
+                        VIEW ALL NOTIFICATIONS
+                      </button>
+                    </div>
+                  </div>
+                </div>
             </div>
 
             {/* Separator */}
@@ -174,12 +289,16 @@ const DashboardLayout = () => {
             <div className="relative" ref={profileDropdownRef}>
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center gap-2 p-1.5 pr-3 bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-full shadow-sm hover:shadow hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20 group"
+                className="flex items-center gap-2 p-1 bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-full shadow-sm hover:shadow hover:border-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20 group h-10"
               >
-                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
-                   <User size={16} className="text-slate-500" />
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shadow-sm">
+                   {user?.profileImageUrl ? (
+                     <img src={user.profileImageUrl} alt="Avatar" className="w-full h-full object-cover" />
+                   ) : (
+                     <User size={16} className="text-slate-500" />
+                   )}
                 </div>
-                <ChevronDown size={14} className={`text-slate-400 group-hover:text-slate-600 transition-all duration-300 ${isProfileOpen ? "rotate-180" : ""}`} />
+                <ChevronDown size={14} className={`mr-1 text-slate-400 group-hover:text-slate-600 transition-all duration-300 ${isProfileOpen ? "rotate-180" : ""}`} />
               </button>
 
               {/* Dropdown Menu */}
@@ -194,14 +313,14 @@ const DashboardLayout = () => {
                 </div>
                 
                 <div className="px-2 py-2">
-                  <button className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-all group">
+                  <Link to="/dashboard/profile" onClick={() => setIsProfileOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-all group">
                     <User size={16} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
                     My Profile
-                  </button>
-                  <button className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-all group">
+                  </Link>
+                  <Link to="/dashboard/settings" onClick={() => setIsProfileOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-all group">
                     <Settings size={16} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
                     Account Settings
-                  </button>
+                  </Link>
                 </div>
                 
                 <div className="px-2 py-2 border-t border-slate-100/80">

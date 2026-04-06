@@ -1,8 +1,8 @@
-package com.project.paf.modules.auth.controller;
+package com.project.paf.modules.user.controller;
 
-import com.project.paf.modules.auth.model.Role;
-import com.project.paf.modules.auth.model.User;
-import com.project.paf.modules.auth.repository.UserRepository;
+import com.project.paf.modules.user.model.Role;
+import com.project.paf.modules.user.model.User;
+import com.project.paf.modules.user.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
