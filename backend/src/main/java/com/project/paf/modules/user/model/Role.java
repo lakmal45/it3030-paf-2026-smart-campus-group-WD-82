@@ -1,4 +1,4 @@
-package com.project.paf.modules.auth.model;
+package com.project.paf.modules.user.model;
 
 public enum Role {
     USER,

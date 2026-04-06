@@ -25,6 +25,7 @@ import MyBookings from "./pages/user/MyBookings";
 import CreateBooking from "./pages/user/CreateBooking";
 import MyTickets from "./pages/user/MyTickets";
 import Profile from "./pages/user/Profile";
+import Settings from "./pages/user/Settings";
 
 // Admin Pages
 import UserManagement from "./pages/admin/UserManagement";
@@ -271,6 +272,11 @@ function App() {
                 }
               />
             </Route>
+
+            {/* Shared Dashboard Routes */}
+            <Route path="profile" element={<Profile />} />
+            <Route path="settings" element={<Settings />} />
+
           </Route>
 
           {/* Fallback Unauthorized/Not Found */}
