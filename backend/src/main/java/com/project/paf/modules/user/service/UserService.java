@@ -1,0 +1,64 @@
+package com.project.paf.modules.user.service;
+
+import com.project.paf.modules.user.model.Role;
+import com.project.paf.modules.user.model.User;
+import com.project.paf.modules.user.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+@Service
+public class UserService {
+
+    private final UserRepository repo;
+    private final PasswordEncoder encoder;
+
+    public UserService(UserRepository repo, PasswordEncoder encoder) {
+        this.repo = repo;
+        this.encoder = encoder;
+    }
+
+    public User register(User user) {
+
+        user.setPassword(encoder.encode(user.getPassword()));
+
+        // default role
+        user.setRole(Role.USER);
+
+        return repo.save(user);
+    }
+
+    public User login(String email, String password) {
+
+        User user = repo.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getPassword() == null) {
+            throw new RuntimeException("This account uses Google Sign-In. Please login with Google.");
+        }
+
+        if (!encoder.matches(password, user.getPassword())) {
+            throw new RuntimeException("Invalid credentials");
+        }
+
+        return user;
+    }
+
+    public User updateUser(Long id, User updateData) {
+        User user = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        if (updateData.getName() != null) user.setName(updateData.getName());
+        if (updateData.getProfileImageUrl() != null) user.setProfileImageUrl(updateData.getProfileImageUrl());
+        return repo.save(user);
+    }
+
+    public void changePassword(Long id, String oldPassword, String newPassword) {
+        User user = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getPassword() == null) throw new RuntimeException("Google users cannot change password");
+        if (!encoder.matches(oldPassword, user.getPassword())) throw new RuntimeException("Old password incorrect");
+        user.setPassword(encoder.encode(newPassword));
+        repo.save(user);
+    }
+
+    public void deleteUser(Long id) {
+        repo.deleteById(id);
+    }
+}

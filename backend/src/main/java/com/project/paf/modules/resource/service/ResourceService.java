@@ -1,11 +1,10 @@
-package com.project.paf.service;
+package com.project.paf.modules.resource.service;
 
-import com.project.paf.dto.ResourceRequestDTO;
-import com.project.paf.dto.ResourceResponseDTO;
-import com.project.paf.exception.ResourceNotFoundException;
-import com.project.paf.model.Resource;
-import com.project.paf.model.ResourceStatus;
-import com.project.paf.repository.ResourceRepository;
+import com.project.paf.modules.resource.dto.ResourceRequestDTO;
+import com.project.paf.modules.resource.dto.ResourceResponseDTO;
+import com.project.paf.modules.resource.exception.ResourceNotFoundException;
+import com.project.paf.modules.resource.model.Resource;
+import com.project.paf.modules.resource.repository.ResourceRepository;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Service;
 

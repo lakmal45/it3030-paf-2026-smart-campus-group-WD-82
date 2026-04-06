@@ -1,5 +1,6 @@
 package com.project.paf.exception;
 
+import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;

@@ -1,4 +1,4 @@
-package com.project.paf.model;
+package com.project.paf.modules.resource.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

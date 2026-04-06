@@ -1,6 +1,6 @@
-package com.project.paf.dto;
+package com.project.paf.modules.resource.dto;
 
-import com.project.paf.model.ResourceStatus;
+import com.project.paf.modules.resource.model.ResourceStatus;
 import lombok.Getter;
 import lombok.Setter;
 

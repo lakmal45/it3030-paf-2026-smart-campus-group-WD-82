@@ -1,4 +1,4 @@
-package com.project.paf.model;
+package com.project.paf.modules.resource.model;
 
 public enum ResourceStatus {
     ACTIVE,

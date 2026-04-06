@@ -1,7 +1,7 @@
 package com.project.paf.modules.user.controller;
 
 import com.project.paf.modules.user.model.User;
-import com.project.paf.service.UserService;
+import com.project.paf.modules.user.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

@@ -1,8 +1,8 @@
-package com.project.paf.controller;
+package com.project.paf.modules.resource.controller;
 
-import com.project.paf.dto.ResourceRequestDTO;
-import com.project.paf.dto.ResourceResponseDTO;
-import com.project.paf.service.ResourceService;
+import com.project.paf.modules.resource.dto.ResourceRequestDTO;
+import com.project.paf.modules.resource.dto.ResourceResponseDTO;
+import com.project.paf.modules.resource.service.ResourceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;

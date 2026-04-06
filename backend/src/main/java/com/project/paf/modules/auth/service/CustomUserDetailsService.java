@@ -1,4 +1,4 @@
-package com.project.paf.service;
+package com.project.paf.modules.auth.service;
 
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;

@@ -1,4 +1,4 @@
-package com.project.paf.exception;
+package com.project.paf.modules.resource.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
