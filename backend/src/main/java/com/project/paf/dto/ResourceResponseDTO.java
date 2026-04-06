@@ -1,5 +1,6 @@
 package com.project.paf.dto;
 
+import com.project.paf.model.ResourceStatus;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,6 +14,6 @@ public class ResourceResponseDTO {
     private String location;
     private Integer capacity;
     private Boolean available;
-    private String status;
+    private ResourceStatus status;
     private String description;
 }

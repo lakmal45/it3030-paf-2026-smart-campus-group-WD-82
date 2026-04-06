@@ -1,0 +1,86 @@
+package com.project.paf.controller;
+
+import com.project.paf.dto.ResourceRequestDTO;
+import com.project.paf.dto.ResourceResponseDTO;
+import com.project.paf.service.ResourceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/resources")
+@Tag(name = "Resource Management", description = "Endpoints for managing campus resources like rooms, labs, and equipment")
+@CrossOrigin(origins = "*")
+public class ResourceController {
+
+    private final ResourceService resourceService;
+
+    public ResourceController(ResourceService resourceService) {
+        this.resourceService = resourceService;
+    }
+
+    @GetMapping
+    @Operation(summary = "Get all resources", description = "Retrieves a complete list of all campus resources")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved list")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'MANAGER')")
+    public ResponseEntity<List<ResourceResponseDTO>> getAllResources() {
+        return ResponseEntity.ok(resourceService.getAllResources());
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Get resource by ID", description = "Retrieves details of a specific resource using its ID")
+    @ApiResponse(responseCode = "200", description = "Resource found")
+    @ApiResponse(responseCode = "404", description = "Resource not found")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'MANAGER')")
+    public ResponseEntity<ResourceResponseDTO> getResourceById(@PathVariable Long id) {
+        return ResponseEntity.ok(resourceService.getResourceById(id));
+    }
+
+    @PostMapping
+    @Operation(summary = "Create a new resource", description = "Adds a new resource to the campus catalogue (Admin only)")
+    @ApiResponse(responseCode = "201", description = "Resource created successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid input data")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResourceResponseDTO> createResource(@Valid @RequestBody ResourceRequestDTO requestDTO) {
+        ResourceResponseDTO created = resourceService.createResource(requestDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Update an existing resource", description = "Modifies an existing resource's details (Admin only)")
+    @ApiResponse(responseCode = "200", description = "Resource updated successfully")
+    @ApiResponse(responseCode = "404", description = "Resource not found")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResourceResponseDTO> updateResource(@PathVariable Long id, @Valid @RequestBody ResourceRequestDTO requestDTO) {
+        return ResponseEntity.ok(resourceService.updateResource(id, requestDTO));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete a resource", description = "Removes a resource from the system (Admin only)")
+    @ApiResponse(responseCode = "204", description = "Resource deleted successfully")
+    @ApiResponse(responseCode = "404", description = "Resource not found")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteResource(@PathVariable Long id) {
+        resourceService.deleteResource(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Search resources", description = "Filters resources by type, location, and minimum capacity")
+    @ApiResponse(responseCode = "200", description = "Search results returned")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'MANAGER')")
+    public ResponseEntity<List<ResourceResponseDTO>> searchResources(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) Integer capacity
+    ) {
+        return ResponseEntity.ok(resourceService.getFilteredResources(null, type, location, capacity, null));
+    }
+}

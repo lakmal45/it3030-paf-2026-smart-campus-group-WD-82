@@ -2,33 +2,30 @@ import {
   createContext,
   useContext,
   useState,
-  useEffect,
   useCallback,
 } from "react";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
+  const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem("user");
-
     if (storedUser && storedUser !== "undefined") {
       try {
         const parsedUser = JSON.parse(storedUser);
         if (typeof parsedUser === "object" && parsedUser !== null) {
-          setUser(parsedUser);
+          return parsedUser;
         } else {
           localStorage.removeItem("user");
         }
-      } catch (error) {
+      } catch {
         localStorage.removeItem("user");
       }
     }
-    setLoading(false);
-  }, []);
+    return null;
+  });
+  const [loading] = useState(false);
+
 
   // Wrap in useCallback to prevent infinite render loops!
   const login = useCallback((userData) => {
@@ -60,6 +57,7 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   return useContext(AuthContext);
 };

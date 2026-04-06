@@ -1,5 +1,6 @@
 package com.project.paf.dto;
 
+import com.project.paf.model.ResourceStatus;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -27,8 +28,8 @@ public class ResourceRequestDTO {
     @NotNull(message = "Availability is required")
     private Boolean available;
 
-    @NotBlank(message = "Resource status is required")
-    private String status;
+    @NotNull(message = "Resource status is required")
+    private ResourceStatus status;
 
     @Size(max = 500, message = "Description cannot exceed 500 characters")
     private String description;

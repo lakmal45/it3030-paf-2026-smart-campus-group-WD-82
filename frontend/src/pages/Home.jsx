@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ArrowRight, Building2, Users, ShieldCheck, Zap, User, Settings, LogOut, ChevronDown, CheckCircle2, LayoutDashboard, Database, Activity } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useState, useRef, useEffect } from "react";
@@ -7,7 +7,6 @@ const Home = () => {
   const { user, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileDropdownRef = useRef(null);
-  const navigate = useNavigate();
 
   // Close profile dropdown when clicking outside
   useEffect(() => {

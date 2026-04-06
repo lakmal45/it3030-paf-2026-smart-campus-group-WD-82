@@ -17,7 +17,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(originPatterns = "http://localhost:*")
 public class AdminController {
 
     private final UserRepository repo;

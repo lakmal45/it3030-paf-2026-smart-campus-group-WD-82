@@ -36,6 +36,7 @@ import SystemSettings from "./pages/admin/SystemSettings";
 import Reports from "./pages/manager/Reports";
 import BookingAnalytics from "./pages/manager/BookingAnalytics";
 import Maintenance from "./pages/manager/Maintenance";
+import ResourceListPage from "./pages/manager/ResourceListPage";
 
 // Technician Pages
 import AssignedTickets from "./pages/technician/AssignedTickets";
@@ -130,6 +131,14 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="resources"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <ResourceListPage />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
 
             {/* Admin Routes */}
@@ -166,6 +175,14 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="resources"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <ResourceListPage />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
 
             {/* Manager Routes */}
@@ -199,6 +216,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
                     <Maintenance />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources"
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                    <ResourceListPage />
                   </ProtectedRoute>
                 }
               />

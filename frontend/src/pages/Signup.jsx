@@ -17,6 +17,7 @@ const Signup = () => {
       alert("Registration successful! Please log in.");
       navigate("/login");
     } catch (err) {
+      void err; 
       alert("Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
