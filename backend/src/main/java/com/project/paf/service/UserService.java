@@ -42,4 +42,23 @@ public class UserService {
 
         return user;
     }
-}
+
+    public User updateUser(Long id, User updateData) {
+        User user = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        if (updateData.getName() != null) user.setName(updateData.getName());
+        if (updateData.getProfileImageUrl() != null) user.setProfileImageUrl(updateData.getProfileImageUrl());
+        return repo.save(user);
+    }
+
+    public void changePassword(Long id, String oldPassword, String newPassword) {
+        User user = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getPassword() == null) throw new RuntimeException("Google users cannot change password");
+        if (!encoder.matches(oldPassword, user.getPassword())) throw new RuntimeException("Old password incorrect");
+        user.setPassword(encoder.encode(newPassword));
+        repo.save(user);
+    }
+
+    public void deleteUser(Long id) {
+        repo.deleteById(id);
+    }
+}

@@ -25,4 +25,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-}
+    @Column(nullable = true)
+    private String profileImageUrl;
+
+}
