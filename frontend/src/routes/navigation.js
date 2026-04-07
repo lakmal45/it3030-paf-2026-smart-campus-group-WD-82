@@ -25,7 +25,6 @@ export const roleNavigation = {
       icon: PlusCircle,
     },
     { name: "My Tickets", path: "/dashboard/user/tickets", icon: Ticket },
-    { name: "Profile", path: "/dashboard/user/profile", icon: User },
     { name: "Resources", path: "/dashboard/user/resources", icon: Box },
   ],
   ADMIN: [
@@ -47,7 +46,11 @@ export const roleNavigation = {
       path: "/dashboard/manager/analytics",
       icon: BarChart,
     },
-    { name: "Maintenance", path: "/dashboard/manager/maintenance", icon: Wrench },
+    {
+      name: "Maintenance",
+      path: "/dashboard/manager/maintenance",
+      icon: Wrench,
+    },
     { name: "Resources", path: "/dashboard/manager/resources", icon: Box },
   ],
   TECHNICIAN: [

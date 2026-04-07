@@ -10,6 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
@@ -30,6 +32,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         String email = oAuth2User.getAttribute("email");
         String name = oAuth2User.getAttribute("name");
+        String profileImageUrl = oAuth2User.getAttribute("picture");
 
         Optional<User> existingUser = userRepository.findByEmail(email);
         User user;
@@ -44,21 +47,29 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
             // default role
             user.setRole(Role.USER);
-
-            userRepository.save(user);
         } else {
             user = existingUser.get();
         }
+
+        user.setName(name);
+        user.setProfileImageUrl(profileImageUrl);
+        user = userRepository.save(user);
+        request.getSession().setAttribute("user", user);
 
         // Get role from database
         String role = user.getRole().name();
 
         response.sendRedirect(
                 "http://localhost:5173/oauth-success?email="
-                        + email +
+                        + encodeParam(email) +
                         "&name="
-                        + java.net.URLEncoder.encode(name, "UTF-8")
-                        + "&role=" + role
+                        + encodeParam(name)
+                        + "&role=" + encodeParam(role)
+                        + "&profileImageUrl=" + encodeParam(profileImageUrl)
         );
+    }
+
+    private String encodeParam(String value) {
+        return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 }

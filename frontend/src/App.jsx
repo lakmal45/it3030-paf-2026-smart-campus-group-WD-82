@@ -9,6 +9,8 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import OAuthSuccess from "./components/OAuthSuccess";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 
 // Layout & Protection
 import DashboardLayout from "./layout/DashboardLayout";
@@ -24,8 +26,6 @@ import TechnicianDashboard from "./pages/technician/TechnicianDashboard";
 import MyBookings from "./pages/user/MyBookings";
 import CreateBooking from "./pages/user/CreateBooking";
 import MyTickets from "./pages/user/MyTickets";
-import Profile from "./pages/user/Profile";
-import Settings from "./pages/user/Settings";
 
 // Admin Pages
 import UserManagement from "./pages/admin/UserManagement";
@@ -120,14 +120,6 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
                     <MyTickets />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="profile"
-                element={
-                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
-                    <Profile />
                   </ProtectedRoute>
                 }
               />
@@ -276,7 +268,6 @@ function App() {
             {/* Shared Dashboard Routes */}
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
-
           </Route>
 
           {/* Fallback Unauthorized/Not Found */}
