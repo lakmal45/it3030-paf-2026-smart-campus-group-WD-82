@@ -17,7 +17,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/resources")
 @Tag(name = "Resource Management", description = "Endpoints for managing campus resources like rooms, labs, and equipment")
-@CrossOrigin(origins = "*")
 public class ResourceController {
 
     private final ResourceService resourceService;
