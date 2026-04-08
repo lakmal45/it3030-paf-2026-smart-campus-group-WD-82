@@ -2,6 +2,7 @@ package com.project.paf.modules.resource.controller;
 
 import com.project.paf.modules.resource.dto.ResourceRequestDTO;
 import com.project.paf.modules.resource.dto.ResourceResponseDTO;
+import com.project.paf.modules.resource.model.ResourceStatus;
 import com.project.paf.modules.resource.service.ResourceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -81,5 +82,16 @@ public class ResourceController {
             @RequestParam(required = false) Integer capacity
     ) {
         return ResponseEntity.ok(resourceService.getFilteredResources(null, type, location, capacity, null));
+    }
+
+    @PatchMapping("/{id}/status")
+    @Operation(summary = "Update resource status", description = "Toggles resource status (Admin/Manager only)")
+    @ApiResponse(responseCode = "200", description = "Status updated successfully")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<ResourceResponseDTO> updateStatus(
+            @PathVariable Long id,
+            @RequestParam ResourceStatus status
+    ) {
+        return ResponseEntity.ok(resourceService.updateResourceStatus(id, status));
     }
 }

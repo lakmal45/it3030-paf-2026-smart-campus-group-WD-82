@@ -135,7 +135,7 @@ const DashboardLayout = () => {
            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-100 shadow-sm cursor-pointer hover:border-indigo-200 hover:shadow-md transition-all">
                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-100 to-purple-100 text-indigo-700 flex items-center justify-center font-bold overflow-hidden shadow-inner border border-white">
                   {user?.profileImageUrl ? (
-                    <img src={user.profileImageUrl} alt="Profile" className="w-full h-full object-cover" />
+                    <img src={user.profileImageUrl} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     user?.name?.charAt(0)?.toUpperCase() || "U"
                   )}
@@ -293,7 +293,7 @@ const DashboardLayout = () => {
               >
                 <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shadow-sm">
                    {user?.profileImageUrl ? (
-                     <img src={user.profileImageUrl} alt="Avatar" className="w-full h-full object-cover" />
+                     <img src={user.profileImageUrl} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                    ) : (
                      <User size={16} className="text-slate-500" />
                    )}

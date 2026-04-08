@@ -21,10 +21,11 @@ const OAuthSuccess = () => {
     const email = params.get("email");
     const name = params.get("name");
     const role = params.get("role");
+    const profileImageUrl = params.get("profileImageUrl");
 
     if (email && name && role) {
       hasProcessed.current = true;
-      login({ email, name, role });
+      login({ email, name, role, profileImageUrl });
       // We navigate immediately after updating the context
       navigate("/dashboard", { replace: true });
     } else {
@@ -32,6 +33,7 @@ const OAuthSuccess = () => {
         email,
         name,
         role,
+        profileImageUrl,
       });
       navigate("/login", { replace: true });
     }

@@ -9,6 +9,8 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import OAuthSuccess from "./components/OAuthSuccess";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 
 // Layout & Protection
 import DashboardLayout from "./layout/DashboardLayout";
@@ -24,8 +26,6 @@ import TechnicianDashboard from "./pages/technician/TechnicianDashboard";
 import MyBookings from "./pages/user/MyBookings";
 import CreateBooking from "./pages/user/CreateBooking";
 import MyTickets from "./pages/user/MyTickets";
-import Profile from "./pages/user/Profile";
-import Settings from "./pages/user/Settings";
 
 // Admin Pages
 import UserManagement from "./pages/admin/UserManagement";
@@ -37,6 +37,8 @@ import Reports from "./pages/manager/Reports";
 import BookingAnalytics from "./pages/manager/BookingAnalytics";
 import Maintenance from "./pages/manager/Maintenance";
 import ResourceListPage from "./pages/manager/ResourceListPage";
+import ResourceDetailPage from "./pages/manager/ResourceDetailPage";
+import ResourceFormPage from "./pages/manager/ResourceFormPage";
 
 // Technician Pages
 import AssignedTickets from "./pages/technician/AssignedTickets";
@@ -124,18 +126,18 @@ function App() {
                 }
               />
               <Route
-                path="profile"
+                path="resources"
                 element={
-                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
-                    <Profile />
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER", "ADMIN", "ROLE_ADMIN", "MANAGER", "ROLE_MANAGER"]}>
+                    <ResourceListPage />
                   </ProtectedRoute>
                 }
               />
               <Route
-                path="resources"
+                path="resources/:id"
                 element={
-                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
-                    <ResourceListPage />
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER", "ADMIN", "ROLE_ADMIN", "MANAGER", "ROLE_MANAGER"]}>
+                    <ResourceDetailPage />
                   </ProtectedRoute>
                 }
               />
@@ -183,6 +185,30 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="resources/new"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <ResourceFormPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <ResourceDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/:id/edit"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <ResourceFormPage />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
 
             {/* Manager Routes */}
@@ -224,6 +250,22 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
                     <ResourceListPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                    <ResourceDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/:id/edit"
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                    <ResourceFormPage />
                   </ProtectedRoute>
                 }
               />
@@ -276,7 +318,6 @@ function App() {
             {/* Shared Dashboard Routes */}
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
-
           </Route>
 
           {/* Fallback Unauthorized/Not Found */}

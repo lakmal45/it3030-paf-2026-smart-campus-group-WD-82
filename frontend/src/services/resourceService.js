@@ -29,6 +29,11 @@ const resourceService = {
   delete: async (id) => {
     await api.delete(`/resources/${id}`);
   },
+
+  updateResourceStatus: async (id, status) => {
+    const response = await api.patch(`/resources/${id}/status`, null, { params: { status } });
+    return response.data;
+  },
 };
 
 export default resourceService;

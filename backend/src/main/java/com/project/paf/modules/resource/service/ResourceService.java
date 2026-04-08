@@ -4,6 +4,7 @@ import com.project.paf.modules.resource.dto.ResourceRequestDTO;
 import com.project.paf.modules.resource.dto.ResourceResponseDTO;
 import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import com.project.paf.modules.resource.model.Resource;
+import com.project.paf.modules.resource.model.ResourceStatus;
 import com.project.paf.modules.resource.repository.ResourceRepository;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Service;
@@ -63,6 +64,23 @@ public class ResourceService {
         existingResource.setAvailable(requestDTO.getAvailable());
         existingResource.setStatus(requestDTO.getStatus());
         existingResource.setDescription(requestDTO.getDescription());
+
+        Resource updatedResource = resourceRepository.save(existingResource);
+        return toResponseDTO(updatedResource);
+    }
+
+    public ResourceResponseDTO updateResourceStatus(Long id, ResourceStatus status) {
+        Resource existingResource = resourceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + id));
+        
+        existingResource.setStatus(status);
+        // If status is BOOKED or IN_MAINTENANCE, we might want to mark available=false, 
+        // but for now, we'll keep it simple as a status toggle.
+        if (status == ResourceStatus.ACTIVE) {
+            existingResource.setAvailable(true);
+        } else if (status == ResourceStatus.RETIRED) {
+            existingResource.setAvailable(false);
+        }
 
         Resource updatedResource = resourceRepository.save(existingResource);
         return toResponseDTO(updatedResource);
