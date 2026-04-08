@@ -36,7 +36,7 @@ const ResourceFormPage = () => {
     if (isEditMode) {
       const fetchResource = async () => {
         try {
-          const data = await resourceService.getResourceById(id);
+          const data = await resourceService.getById(id);
           setFormData({
             name: data.name || "",
             type: data.type || "Room",
@@ -78,7 +78,7 @@ const ResourceFormPage = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = "Resource name is required";
     if (!formData.location.trim()) newErrors.location = "Location is required";
-    if (formData.capacity < 1) newErrors.capacity = "Capacity must be at least 1";
+    if (parseInt(formData.capacity) <= 0) newErrors.capacity = "Capacity must be a positive number";
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -92,9 +92,9 @@ const ResourceFormPage = () => {
     setServerError("");
     try {
       if (isEditMode) {
-        await resourceService.updateResource(id, formData);
+        await resourceService.update(id, formData);
       } else {
-        await resourceService.createResource(formData);
+        await resourceService.create(formData);
       }
       navigate("/dashboard/manager/resources", { 
         state: { message: `Resource ${isEditMode ? "updated" : "created"} successfully!` } 

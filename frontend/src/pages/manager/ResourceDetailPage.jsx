@@ -33,7 +33,7 @@ const ResourceDetailPage = () => {
   useEffect(() => {
     const fetchResource = async () => {
       try {
-        const data = await resourceService.getResourceById(id);
+        const data = await resourceService.getById(id);
         setResource(data);
       } catch (err) {
         console.error("Error fetching resource details:", err);
@@ -51,7 +51,7 @@ const ResourceDetailPage = () => {
     
     setIsDeleting(true);
     try {
-      await resourceService.deleteResource(id);
+      await resourceService.delete(id);
       navigate("/dashboard/manager/resources", { state: { message: "Resource deleted successfully" } });
     } catch (err) {
       setError("Failed to delete resource. Please try again.");
@@ -65,7 +65,8 @@ const ResourceDetailPage = () => {
     setIsToggling(true);
     const newStatus = resource.status === "ACTIVE" ? "IN_MAINTENANCE" : "ACTIVE";
     try {
-      const updated = await resourceService.updateResourceStatus(id, newStatus);
+      // Use the generic update method for status toggling
+      const updated = await resourceService.update(id, { ...resource, status: newStatus });
       setResource(updated);
     } catch (err) {
       console.error("Error toggling status:", err);
