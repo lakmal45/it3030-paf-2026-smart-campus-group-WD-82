@@ -114,7 +114,7 @@ const ResourceListPage = () => {
               <LayoutGrid className="h-5 w-5" />
             </button>
           </div>
-          {isAdmin && (
+          {canModify && (
             <button
               onClick={handleAddClick}
               className="flex-1 sm:flex-none bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-200 font-bold flex items-center justify-center space-x-2"
@@ -291,19 +291,6 @@ const ResourceListPage = () => {
                   <tr>
                     <td colSpan="5" className="px-6 py-16 text-center text-slate-500 italic font-medium">
                        No resources match your current selection.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default ResourceListPage;
                     </td>
                   </tr>
                 )}
