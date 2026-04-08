@@ -7,7 +7,7 @@ const ResourceForm = ({ resource, onSubmit, onCancel, errors: serverErrors }) =>
     location: "",
     capacity: 1,
     available: true,
-    status: "Active",
+    status: "ACTIVE",
     description: "",
   });
 
@@ -22,7 +22,7 @@ const ResourceForm = ({ resource, onSubmit, onCancel, errors: serverErrors }) =>
         location: resource.location || "",
         capacity: resource.capacity || 1,
         available: resource.available ?? true,
-        status: resource.status || "Active",
+        status: resource.status || "ACTIVE",
         description: resource.description || "",
       });
     }
@@ -147,9 +147,10 @@ const ResourceForm = ({ resource, onSubmit, onCancel, errors: serverErrors }) =>
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"
               >
-                <option value="Active">Active</option>
-                <option value="Maintenance">Maintenance</option>
-                <option value="Inactive">Inactive</option>
+                <option value="ACTIVE">Active</option>
+                <option value="IN_MAINTENANCE">Maintenance</option>
+                <option value="UNDER_REPAIR">Under Repair</option>
+                <option value="RETIRED">Retired</option>
               </select>
             </div>
             <div className="flex items-center pt-6">

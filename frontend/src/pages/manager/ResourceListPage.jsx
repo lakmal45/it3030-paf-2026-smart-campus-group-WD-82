@@ -140,7 +140,9 @@ const ResourceListPage = () => {
                     <p className="text-sm text-gray-500 mt-1 uppercase tracking-wider font-semibold">{resource.type}</p>
                   </div>
                   <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                    resource.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    resource.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 
+                    resource.status === 'IN_MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
                   }`}>
                     {resource.status}
                   </span>
@@ -231,7 +233,9 @@ const ResourceListPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{resource.capacity}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        resource.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        resource.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 
+                        resource.status === 'IN_MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
                       }`}>
                         {resource.status}
                       </span>
