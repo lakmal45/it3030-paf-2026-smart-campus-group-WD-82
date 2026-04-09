@@ -76,6 +76,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/reports/**")
                         .hasRole("MANAGER")
 
+                        // Member 3 – ticket endpoints (role checks done via @PreAuthorize)
+                        .requestMatchers("/api/tickets/**").authenticated()
+
                         .anyRequest().authenticated()
                 )
 

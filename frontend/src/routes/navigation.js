@@ -25,6 +25,11 @@ export const roleNavigation = {
       icon: PlusCircle,
     },
     { name: "My Tickets", path: "/dashboard/user/tickets", icon: Ticket },
+    {
+      name: "Report Incident",
+      path: "/dashboard/user/tickets/new",
+      icon: Wrench,
+    },
     { name: "Profile", path: "/dashboard/user/profile", icon: User },
     { name: "Resources", path: "/dashboard/user/resources", icon: Box },
   ],
@@ -32,6 +37,7 @@ export const roleNavigation = {
     { name: "Dashboard", path: "/dashboard/admin", icon: LayoutDashboard },
     { name: "User Management", path: "/dashboard/admin/users", icon: Users },
     { name: "Role Management", path: "/dashboard/admin/roles", icon: Shield },
+    { name: "All Tickets", path: "/dashboard/admin/tickets", icon: Ticket },
     {
       name: "System Settings",
       path: "/dashboard/admin/settings",

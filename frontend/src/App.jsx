@@ -25,11 +25,14 @@ import MyBookings from "./pages/user/MyBookings";
 import CreateBooking from "./pages/user/CreateBooking";
 import MyTickets from "./pages/user/MyTickets";
 import Profile from "./pages/user/Profile";
+import CreateTicketForm from "./components/tickets/CreateTicketForm";
+import TicketDetail from "./components/tickets/TicketDetail";
 
 // Admin Pages
 import UserManagement from "./pages/admin/UserManagement";
 import RoleManagement from "./pages/admin/RoleManagement";
 import SystemSettings from "./pages/admin/SystemSettings";
+import AllTickets from "./pages/admin/AllTickets";
 
 // Manager Pages
 import Reports from "./pages/manager/Reports";
@@ -123,6 +126,22 @@ function App() {
                 }
               />
               <Route
+                path="tickets/new"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <CreateTicketForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <TicketDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="profile"
                 element={
                   <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
@@ -171,6 +190,22 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
                     <SystemSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <AllTickets />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <TicketDetail />
                   </ProtectedRoute>
                 }
               />
@@ -247,6 +282,16 @@ function App() {
                     allowedRoles={["TECHNICIAN", "ROLE_TECHNICIAN"]}
                   >
                     <AssignedTickets />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets/:id"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["TECHNICIAN", "ROLE_TECHNICIAN"]}
+                  >
+                    <TicketDetail />
                   </ProtectedRoute>
                 }
               />
