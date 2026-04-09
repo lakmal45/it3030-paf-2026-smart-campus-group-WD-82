@@ -9,7 +9,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import OAuthSuccess from "./components/OAuthSuccess";
-import Profile from "./pages/Profile";
+import GeneralProfile from "./pages/Profile";
 import Settings from "./pages/Settings";
 
 // Layout & Protection
@@ -162,7 +162,7 @@ function App() {
                 }
               />
               <Route
-                path="resources/:id"
+                path="resources"
                 element={
                   <ProtectedRoute
                     allowedRoles={[
@@ -379,7 +379,7 @@ function App() {
             </Route>
 
             {/* Shared Dashboard Routes */}
-            <Route path="profile" element={<Profile />} />
+            <Route path="profile" element={<GeneralProfile />} />
             <Route path="settings" element={<Settings />} />
           </Route>
 

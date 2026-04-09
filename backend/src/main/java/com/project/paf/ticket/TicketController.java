@@ -6,11 +6,10 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.security.Principal;
 import java.util.List;
 
 /**
@@ -45,9 +44,10 @@ public class TicketController {
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<TicketResponse> createTicket(
             @Valid @RequestBody CreateTicketRequest request,
-            Principal principal) {
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
-        User currentUser = resolveUser(principal);
+        User currentUser = resolveUser(session, emailHeader);
         TicketResponse response = ticketService.createTicket(request, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -59,9 +59,10 @@ public class TicketController {
     @GetMapping
     public ResponseEntity<List<TicketResponse>> getAllTickets(
             @RequestParam(required = false) String status,
-            Principal principal) {
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
-        User currentUser = resolveUser(principal);
+        User currentUser = resolveUser(session, emailHeader);
         return ResponseEntity.ok(ticketService.getAllTickets(status, currentUser));
     }
 
@@ -78,13 +79,14 @@ public class TicketController {
      * Only ADMIN or TECHNICIAN may call this endpoint.
      */
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN', 'MANAGER')")
     public ResponseEntity<TicketResponse> updateTicketStatus(
             @PathVariable Long id,
             @Valid @RequestBody UpdateTicketStatusRequest request,
-            Principal principal) {
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
-        User currentUser = resolveUser(principal);
+        User currentUser = resolveUser(session, emailHeader);
+        requireRoles(currentUser, Role.ADMIN, Role.TECHNICIAN, Role.MANAGER);
         return ResponseEntity.ok(ticketService.updateTicketStatus(id, request, currentUser));
     }
 
@@ -93,13 +95,14 @@ public class TicketController {
      * Only ADMIN may call this endpoint.
      */
     @PutMapping("/{id}/assign")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TicketResponse> assignTechnician(
             @PathVariable Long id,
             @Valid @RequestBody AssignTechnicianRequest request,
-            Principal principal) {
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
-        User currentUser = resolveUser(principal);
+        User currentUser = resolveUser(session, emailHeader);
+        requireRoles(currentUser, Role.ADMIN);
         return ResponseEntity.ok(
                 ticketService.assignTechnician(id, request.getTechnicianId(), currentUser));
     }
@@ -109,10 +112,13 @@ public class TicketController {
      * Only ADMIN may call this endpoint.
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ResponseEntity<Void> deleteTicket(@PathVariable Long id, Principal principal) {
-        User currentUser = resolveUser(principal);
+    public ResponseEntity<Void> deleteTicket(
+            @PathVariable Long id, 
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
+        User currentUser = resolveUser(session, emailHeader);
+        requireRoles(currentUser, Role.ADMIN);
         ticketService.deleteTicket(id, currentUser);
         return ResponseEntity.noContent().build();
     }
@@ -149,9 +155,10 @@ public class TicketController {
     public ResponseEntity<CommentResponse> addComment(
             @PathVariable Long id,
             @Valid @RequestBody CommentRequest request,
-            Principal principal) {
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
-        User currentUser = resolveUser(principal);
+        User currentUser = resolveUser(session, emailHeader);
         CommentResponse response = ticketService.addComment(id, request, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -165,9 +172,10 @@ public class TicketController {
             @PathVariable Long ticketId,
             @PathVariable Long commentId,
             @Valid @RequestBody CommentRequest request,
-            Principal principal) {
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
-        User currentUser = resolveUser(principal);
+        User currentUser = resolveUser(session, emailHeader);
         return ResponseEntity.ok(ticketService.editComment(commentId, request, currentUser));
     }
 
@@ -180,27 +188,52 @@ public class TicketController {
     public ResponseEntity<Void> deleteComment(
             @PathVariable Long ticketId,
             @PathVariable Long commentId,
-            Principal principal) {
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
-        User currentUser = resolveUser(principal);
+        User currentUser = resolveUser(session, emailHeader);
         ticketService.deleteComment(commentId, currentUser);
         return ResponseEntity.noContent().build();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Helper
-    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * Resolves the current {@link User} from either the session or the X-User-Email header.
+     * Throws 401 Unauthorized if no user can be identified.
+     */
+    private User resolveUser(HttpSession session, String emailHeader) {
+        User resolved = null;
+
+        // 1. Try session first
+        Object sessionAttr = session.getAttribute("user");
+        if (sessionAttr instanceof User) {
+            resolved = (User) sessionAttr;
+        }
+
+        // 2. Fall back to email header
+        if (resolved == null && emailHeader != null && !emailHeader.isBlank()) {
+            resolved = userRepository.findByEmail(emailHeader).orElse(null);
+        }
+
+        if (resolved == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        return resolved;
+    }
 
     /**
-     * Resolves the current {@link User} from the Spring Security principal.
-     * The principal name is the user's email (set by CustomUserDetailsService).
-     *
-     * <p>Falls back to the {@code X-User-Email} header check is done upstream
-     * by the axios interceptor / SecurityConfig.
+     * Guard: verifies the resolved user has any of the required roles.
+     * Throws 403 Forbidden if the user lacks the required role.
      */
-    private User resolveUser(Principal principal) {
-        if (principal == null) {
-            throw new org.springframework.security.access.AccessDeniedException("Not authenticated");
+    private void requireRoles(User user, Role... allowedRoles) {
+        boolean hasRole = false;
+        for (Role role : allowedRoles) {
+            if (user.getRole() == role) {
+                hasRole = true;
+                break;
+            }
+        }
+        if (!hasRole) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized: Role not matching.");
         }
         return userRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new com.project.paf.modules.resource.exception.ResourceNotFoundException(
