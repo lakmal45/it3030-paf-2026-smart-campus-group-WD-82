@@ -101,6 +101,7 @@ public class ResourceService {
         resource.setAvailable(requestDTO.getAvailable());
         resource.setStatus(requestDTO.getStatus());
         resource.setDescription(requestDTO.getDescription());
+        resource.setAvailabilityWindows(requestDTO.getAvailabilityWindows());
         return resource;
     }
 
@@ -114,6 +115,7 @@ public class ResourceService {
         responseDTO.setAvailable(resource.getAvailable());
         responseDTO.setStatus(resource.getStatus());
         responseDTO.setDescription(resource.getDescription());
+        responseDTO.setAvailabilityWindows(resource.getAvailabilityWindows());
         return responseDTO;
     }
 }
