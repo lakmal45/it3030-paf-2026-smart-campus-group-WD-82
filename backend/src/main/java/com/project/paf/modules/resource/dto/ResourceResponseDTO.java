@@ -16,4 +16,5 @@ public class ResourceResponseDTO {
     private Boolean available;
     private ResourceStatus status;
     private String description;
+    private String availabilityWindows;
 }

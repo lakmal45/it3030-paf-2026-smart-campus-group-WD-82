@@ -33,4 +33,7 @@ public class ResourceRequestDTO {
 
     @Size(max = 500, message = "Description cannot exceed 500 characters")
     private String description;
+
+    @Size(max = 200, message = "Availability windows cannot exceed 200 characters")
+    private String availabilityWindows;
 }

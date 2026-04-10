@@ -5,5 +5,6 @@ public enum ResourceStatus {
     IN_MAINTENANCE,
     UNDER_REPAIR,
     RETIRED,
-    BOOKED
+    BOOKED,
+    OUT_OF_SERVICE
 }
