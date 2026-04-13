@@ -1,7 +1,9 @@
 package com.project.paf.ticket;
 
+import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -235,8 +237,5 @@ public class TicketController {
         if (!hasRole) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized: Role not matching.");
         }
-        return userRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new com.project.paf.modules.resource.exception.ResourceNotFoundException(
-                        "Authenticated user not found: " + principal.getName()));
     }
 }

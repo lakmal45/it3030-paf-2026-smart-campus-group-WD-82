@@ -6,6 +6,8 @@ import org.springframework.stereotype.Repository;
 
 import com.project.paf.modules.user.model.User;
 
+import java.util.List;
+
 /**
  * Spring Data JPA repository for {@link IncidentTicket}.
  */
