@@ -1,8 +1,13 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import bookingService from "../../services/bookingService";
 
 const CreateBooking = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({ resource: "", date: "", time: "", reason: "" });
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const validateForm = () => {
     let newErrors = {};
@@ -14,12 +19,24 @@ const CreateBooking = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      alert(`Booking Request Submitted: \n${JSON.stringify(formData, null, 2)}`);
-      setFormData({ resource: "", date: "", time: "", reason: "" });
-      setErrors({});
+    if (!validateForm()) return;
+
+    setSubmitting(true);
+    setSubmitError("");
+
+    try {
+      await bookingService.createBooking(formData);
+      navigate("/dashboard/user/bookings");
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Failed to create booking. Please try again.";
+      setSubmitError(msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -27,6 +44,11 @@ const CreateBooking = () => {
     <div className="p-6 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-slate-800 mb-6">Create New Booking</h1>
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        {submitError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+            {submitError}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Resource</label>
@@ -73,8 +95,12 @@ const CreateBooking = () => {
             ></textarea>
             {errors.reason && <p className="text-red-500 text-xs mt-1">{errors.reason}</p>}
           </div>
-          <button type="submit" className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors">
-            Submit Booking Request
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold rounded-xl transition-colors"
+          >
+            {submitting ? "Submitting..." : "Submit Booking Request"}
           </button>
         </form>
       </div>
