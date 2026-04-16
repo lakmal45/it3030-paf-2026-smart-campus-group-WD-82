@@ -115,7 +115,8 @@ const MyBookings = () => {
                 <th className="p-4 font-semibold">ID</th>
                 <th className="p-4 font-semibold">Resource</th>
                 <th className="p-4 font-semibold">Date</th>
-                <th className="p-4 font-semibold">Time</th>
+                <th className="p-4 font-semibold">Start Time</th>
+                <th className="p-4 font-semibold">End Time</th>
                 <th className="p-4 font-semibold">Reason</th>
                 <th className="p-4 font-semibold">Status</th>
                 <th className="p-4 font-semibold">Actions</th>
@@ -127,7 +128,8 @@ const MyBookings = () => {
                   <td className="p-4 text-slate-700 font-medium">#{booking.id}</td>
                   <td className="p-4 text-slate-600">{booking.resource}</td>
                   <td className="p-4 text-slate-600">{booking.date}</td>
-                  <td className="p-4 text-slate-600">{booking.time}</td>
+                  <td className="p-4 text-slate-600">{booking.startTime}</td>
+                  <td className="p-4 text-slate-600">{booking.endTime}</td>
                   <td className="p-4 text-slate-600 max-w-[200px] truncate" title={booking.reason}>
                     {booking.reason}
                   </td>

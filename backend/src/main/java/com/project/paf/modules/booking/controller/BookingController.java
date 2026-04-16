@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,15 +42,19 @@ public class BookingController {
 
         String resource = request.get("resource");
         String dateStr = request.get("date");
-        String time = request.get("time");
+        String startTimeStr = request.get("startTime");
+        String endTimeStr = request.get("endTime");
         String reason = request.get("reason");
 
-        if (resource == null || dateStr == null || time == null || reason == null) {
+        if (resource == null || dateStr == null || startTimeStr == null || endTimeStr == null || reason == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All fields are required");
         }
 
         LocalDate date = LocalDate.parse(dateStr);
-        Booking booking = bookingService.createBooking(resource, date, time, reason, currentUser);
+        LocalTime startTime = LocalTime.parse(startTimeStr);
+        LocalTime endTime = LocalTime.parse(endTimeStr);
+
+        Booking booking = bookingService.createBooking(resource, date, startTime, endTime, reason, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(booking));
     }
 
@@ -91,7 +96,8 @@ public class BookingController {
         map.put("id", booking.getId());
         map.put("resource", booking.getResource());
         map.put("date", booking.getDate().toString());
-        map.put("time", booking.getTime());
+        map.put("startTime", booking.getStartTime().toString());
+        map.put("endTime", booking.getEndTime().toString());
         map.put("reason", booking.getReason());
         map.put("status", booking.getStatus().name());
         map.put("createdAt", booking.getCreatedAt().toString());

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -22,12 +23,31 @@ public class BookingService {
 
     /**
      * Create a new booking for the given user.
+     * Checks for time-slot conflicts before saving.
      */
-    public Booking createBooking(String resource, LocalDate date, String time, String reason, User user) {
+    public Booking createBooking(String resource, LocalDate date, LocalTime startTime,
+                                  LocalTime endTime, String reason, User user) {
+
+        // Validate that end time is after start time
+        if (!endTime.isAfter(startTime)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "End time must be after start time");
+        }
+
+        // Check for conflicting bookings (exclude CANCELLED)
+        List<Booking> conflicts = bookingRepository.findConflictingBookings(
+                resource, date, startTime, endTime, BookingStatus.CANCELLED);
+
+        if (!conflicts.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This resource is already booked during the selected time slot");
+        }
+
         Booking booking = new Booking();
         booking.setResource(resource);
         booking.setDate(date);
-        booking.setTime(time);
+        booking.setStartTime(startTime);
+        booking.setEndTime(endTime);
         booking.setReason(reason);
         booking.setStatus(BookingStatus.PENDING);
         booking.setUser(user);

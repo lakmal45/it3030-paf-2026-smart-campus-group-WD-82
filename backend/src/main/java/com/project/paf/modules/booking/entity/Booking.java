@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Getter
 @Setter
@@ -24,8 +25,11 @@ public class Booking {
     @Column(nullable = false)
     private LocalDate date;
 
-    @Column(nullable = false, length = 20)
-    private String time;
+    @Column(nullable = false)
+    private LocalTime startTime;
+
+    @Column(nullable = false)
+    private LocalTime endTime;
 
     @Column(nullable = false, length = 500)
     private String reason;

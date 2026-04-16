@@ -4,7 +4,7 @@ import bookingService from "../../services/bookingService";
 
 const CreateBooking = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ resource: "", date: "", time: "", reason: "" });
+  const [formData, setFormData] = useState({ resource: "", date: "", startTime: "", endTime: "", reason: "" });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -13,7 +13,11 @@ const CreateBooking = () => {
     let newErrors = {};
     if (!formData.resource) newErrors.resource = "Resource is required.";
     if (!formData.date) newErrors.date = "Date is required.";
-    if (!formData.time) newErrors.time = "Time is required.";
+    if (!formData.startTime) newErrors.startTime = "Start time is required.";
+    if (!formData.endTime) newErrors.endTime = "End time is required.";
+    if (formData.startTime && formData.endTime && formData.endTime <= formData.startTime) {
+      newErrors.endTime = "End time must be after start time.";
+    }
     if (!formData.reason.trim()) newErrors.reason = "Reason is required.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -52,7 +56,7 @@ const CreateBooking = () => {
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Resource</label>
-            <select 
+            <select
               className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none ${errors.resource ? 'border-red-500 text-red-600' : 'border-slate-200 text-slate-600'}`}
               value={formData.resource}
               onChange={(e) => { setFormData({ ...formData, resource: e.target.value }); if (errors.resource) setErrors({ ...errors, resource: '' }); }}
@@ -66,7 +70,7 @@ const CreateBooking = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
-            <input 
+            <input
               type="date"
               className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none ${errors.date ? 'border-red-500 text-red-600' : 'border-slate-200 text-slate-600'}`}
               value={formData.date}
@@ -74,19 +78,31 @@ const CreateBooking = () => {
             />
             {errors.date && <p className="text-red-500 text-xs mt-1">{errors.date}</p>}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
-            <input 
-              type="time"
-              className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none ${errors.time ? 'border-red-500 text-red-600' : 'border-slate-200 text-slate-600'}`}
-              value={formData.time}
-              onChange={(e) => { setFormData({ ...formData, time: e.target.value }); if (errors.time) setErrors({ ...errors, time: '' }); }}
-            />
-            {errors.time && <p className="text-red-500 text-xs mt-1">{errors.time}</p>}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Start Time</label>
+              <input
+                type="time"
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none ${errors.startTime ? 'border-red-500 text-red-600' : 'border-slate-200 text-slate-600'}`}
+                value={formData.startTime}
+                onChange={(e) => { setFormData({ ...formData, startTime: e.target.value }); if (errors.startTime) setErrors({ ...errors, startTime: '' }); if (errors.endTime && errors.endTime.includes('after')) setErrors({ ...errors, endTime: '' }); }}
+              />
+              {errors.startTime && <p className="text-red-500 text-xs mt-1">{errors.startTime}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">End Time</label>
+              <input
+                type="time"
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none ${errors.endTime ? 'border-red-500 text-red-600' : 'border-slate-200 text-slate-600'}`}
+                value={formData.endTime}
+                onChange={(e) => { setFormData({ ...formData, endTime: e.target.value }); if (errors.endTime) setErrors({ ...errors, endTime: '' }); }}
+              />
+              {errors.endTime && <p className="text-red-500 text-xs mt-1">{errors.endTime}</p>}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Reason for Booking</label>
-            <textarea 
+            <textarea
               rows="4"
               className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none ${errors.reason ? 'border-red-500 text-red-600' : 'border-slate-200 text-slate-600'}`}
               placeholder="Brief description..."
