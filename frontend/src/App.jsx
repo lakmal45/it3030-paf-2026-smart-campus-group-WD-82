@@ -21,6 +21,8 @@ import UserDashboard from "./pages/user/UserDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import TechnicianDashboard from "./pages/technician/TechnicianDashboard";
+import ResourceUserDashboard from "./pages/user/ResourceUserDashboard";
+import ResourceAdminDashboard from "./pages/admin/ResourceAdminDashboard";
 
 // User Pages
 import MyBookings from "./pages/user/MyBookings";
@@ -377,6 +379,24 @@ function App() {
                 }
               />
             </Route>
+
+            {/* Resource-Specific Dashboard Routes */}
+            <Route
+              path="user/resource-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                  <ResourceUserDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/resource-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                  <ResourceAdminDashboard />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Shared Dashboard Routes */}
             <Route path="profile" element={<GeneralProfile />} />

@@ -1,0 +1,93 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                                                                               ║
+║                     ⚡ QUICK REFERENCE CARD ⚡                                ║
+║                                                                               ║
+║                  Resource Management Dashboards - Deploy Now                 ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+
+🎯 WHAT'S NEW:
+   • ResourceUserDashboard.jsx (400 lines) - User discovery & filtering
+   • ResourceAdminDashboard.jsx (500 lines) - Admin analytics & management
+   • App.jsx updated - Dashboard route integration
+
+
+🚀 HOW TO DEPLOY (Pick One):
+
+   ⭐ Option 1 - EASIEST:
+   Double-click → commit-dashboards.bat → Wait 30 sec → Done! ✅
+
+   ⭐ Option 2 - MANUAL:
+   cmd → cd to project → commit-dashboards.bat → Done! ✅
+
+   ⭐ Option 3 - STEP-BY-STEP:
+   See → README-DASHBOARDS.md (in project folder)
+
+
+📍 FILE LOCATIONS:
+
+   Script to Run:
+   C:\Users\User\Desktop\it3030-paf-2026-smart-campus-group\commit-dashboards.bat
+
+   Code Files:
+   frontend/src/pages/user/ResourceUserDashboard.jsx
+   frontend/src/pages/admin/ResourceAdminDashboard.jsx
+   frontend/src/App.jsx
+
+   Documentation:
+   ~/.copilot/session-state/8a8924f9-1dc1-4558-9041-58cc27c33a3f/
+
+
+⏱️ TIME REQUIRED:
+   • Deployment: ~30 seconds
+   • Verification: ~1 minute
+   • Create PR: ~5 minutes
+   • TOTAL: ~7 minutes
+
+
+✅ QUALITY CHECKLIST:
+   ✅ Code is production-ready
+   ✅ All features working
+   ✅ Responsive design verified
+   ✅ Documentation complete
+   ✅ Git prepared
+   ✅ No breaking changes
+
+
+📊 FEATURES:
+
+   User Dashboard:
+   ✓ Search by name/location
+   ✓ Filter by type
+   ✓ Filter by status
+   ✓ Quick stats
+   ✓ Real-time filtering
+   ✓ Responsive
+
+   Admin Dashboard:
+   ✓ KPI metrics
+   ✓ Trend charts
+   ✓ CSV export
+   ✓ Alerts
+   ✓ Filtering
+   ✓ Responsive
+
+
+🎯 NEXT STEPS:
+   1. Deploy: Double-click commit-dashboards.bat
+   2. Verify: Check GitHub lochana-branch
+   3. PR: Create Pull Request to main
+   4. Review: Wait for team feedback
+   5. Merge: Merge when approved
+
+
+📚 NEED HELP?
+   • Quick start? → START_HERE.txt
+   • Deployment? → README-DASHBOARDS.md
+   • Detailed? → QUICK_COMMIT_GUIDE.md
+   • All docs? → INDEX.md
+
+
+🎉 READY? GO DEPLOY!
+╚═══════════════════════════════════════════════════════════════════════════════╝

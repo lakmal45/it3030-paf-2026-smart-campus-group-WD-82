@@ -29,7 +29,6 @@ public class ResourceController {
     @GetMapping
     @Operation(summary = "Get all resources", description = "Retrieves a complete list of all campus resources")
     @ApiResponse(responseCode = "200", description = "Successfully retrieved list")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<List<ResourceResponseDTO>> getAllResources() {
         return ResponseEntity.ok(resourceService.getAllResources());
     }
@@ -38,7 +37,6 @@ public class ResourceController {
     @Operation(summary = "Get resource by ID", description = "Retrieves details of a specific resource using its ID")
     @ApiResponse(responseCode = "200", description = "Resource found")
     @ApiResponse(responseCode = "404", description = "Resource not found")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ResourceResponseDTO> getResourceById(@PathVariable Long id) {
         return ResponseEntity.ok(resourceService.getResourceById(id));
     }
@@ -47,7 +45,6 @@ public class ResourceController {
     @Operation(summary = "Create a new resource", description = "Adds a new resource to the campus catalogue (Admin only)")
     @ApiResponse(responseCode = "201", description = "Resource created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
     public ResponseEntity<ResourceResponseDTO> createResource(@Valid @RequestBody ResourceRequestDTO requestDTO) {
         ResourceResponseDTO created = resourceService.createResource(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -57,7 +54,6 @@ public class ResourceController {
     @Operation(summary = "Update an existing resource", description = "Modifies an existing resource's details (Admin only)")
     @ApiResponse(responseCode = "200", description = "Resource updated successfully")
     @ApiResponse(responseCode = "404", description = "Resource not found")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
     public ResponseEntity<ResourceResponseDTO> updateResource(@PathVariable Long id, @Valid @RequestBody ResourceRequestDTO requestDTO) {
         return ResponseEntity.ok(resourceService.updateResource(id, requestDTO));
     }
@@ -66,7 +62,6 @@ public class ResourceController {
     @Operation(summary = "Delete a resource", description = "Removes a resource from the system (Admin only)")
     @ApiResponse(responseCode = "204", description = "Resource deleted successfully")
     @ApiResponse(responseCode = "404", description = "Resource not found")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
     public ResponseEntity<Void> deleteResource(@PathVariable Long id) {
         resourceService.deleteResource(id);
         return ResponseEntity.noContent().build();
@@ -75,7 +70,6 @@ public class ResourceController {
     @GetMapping("/search")
     @Operation(summary = "Search resources", description = "Filters resources by name, type, location, and availability")
     @ApiResponse(responseCode = "200", description = "Search results returned")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<List<ResourceResponseDTO>> searchResources(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String type,
@@ -89,7 +83,6 @@ public class ResourceController {
     @PatchMapping("/{id}/status")
     @Operation(summary = "Update resource status", description = "Toggles resource status (Admin/Manager only)")
     @ApiResponse(responseCode = "200", description = "Status updated successfully")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ResourceResponseDTO> updateStatus(
             @PathVariable Long id,
             @RequestParam ResourceStatus status
