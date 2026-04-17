@@ -4,6 +4,7 @@ import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
+import com.smartcampus.notification.NotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -33,15 +34,18 @@ public class TicketService {
     private final TicketCommentRepository commentRepository;
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public TicketService(TicketRepository ticketRepository,
                          TicketCommentRepository commentRepository,
                          FileStorageService fileStorageService,
-                         UserRepository userRepository) {
+                         UserRepository userRepository,
+                         NotificationService notificationService) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -92,12 +96,14 @@ public class TicketService {
      *   <li>USER → only their own tickets (with optional status filter).</li>
      * </ul>
      *
-     * @param statusFilter optional status string to filter by
-     * @param currentUser  the authenticated caller
+     * @param statusFilter   optional status string to filter by
+     * @param categoryFilter optional category string to filter by
+     * @param priorityFilter optional priority string to filter by
+     * @param currentUser    the authenticated caller
      * @return list of {@link TicketResponse}
      */
     @Transactional(readOnly = true)
-    public List<TicketResponse> getAllTickets(String statusFilter, User currentUser) {
+    public List<TicketResponse> getAllTickets(String statusFilter, String categoryFilter, String priorityFilter, User currentUser) {
         boolean isPrivileged = currentUser.getRole() == Role.ADMIN
                 || currentUser.getRole() == Role.TECHNICIAN
                 || currentUser.getRole() == Role.MANAGER;
@@ -117,6 +123,18 @@ public class TicketService {
             } else {
                 tickets = ticketRepository.findByCreatedBy(currentUser);
             }
+        }
+
+        if (categoryFilter != null && !categoryFilter.isBlank()) {
+            tickets = tickets.stream()
+                             .filter(t -> t.getCategory().equalsIgnoreCase(categoryFilter))
+                             .collect(Collectors.toList());
+        }
+
+        if (priorityFilter != null && !priorityFilter.isBlank()) {
+            tickets = tickets.stream()
+                             .filter(t -> t.getPriority().equalsIgnoreCase(priorityFilter))
+                             .collect(Collectors.toList());
         }
 
         return tickets.stream().map(this::mapToResponse).collect(Collectors.toList());
@@ -143,6 +161,10 @@ public class TicketService {
     public TicketResponse updateTicketStatus(Long id,
                                              UpdateTicketStatusRequest request,
                                              User currentUser) {
+        if (currentUser.getRole() == Role.USER) {
+            throw new AccessDeniedException("Only ADMIN or TECHNICIAN can update ticket status.");
+        }
+
         IncidentTicket ticket = findTicketOrThrow(id);
         TicketStatus current = ticket.getStatus();
         TicketStatus next = request.getStatus();
@@ -156,6 +178,13 @@ public class TicketService {
         IncidentTicket updated = ticketRepository.save(ticket);
         log.info("Ticket #{} status changed: {} → {} by '{}'",
                 id, current, next, currentUser.getEmail());
+
+        notificationService.sendNotification(
+            ticket.getCreatedBy(),
+            "Your ticket #" + ticket.getId() + " status changed to " + next,
+            "TICKET_UPDATE"
+        );
+
         return mapToResponse(updated);
     }
 
@@ -171,6 +200,10 @@ public class TicketService {
      * @throws ResourceNotFoundException if the technician user does not exist
      */
     public TicketResponse assignTechnician(Long ticketId, Long technicianId, User currentUser) {
+        if (currentUser.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Only ADMIN can assign technicians.");
+        }
+
         IncidentTicket ticket = findTicketOrThrow(ticketId);
         User technician = userRepository.findById(technicianId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -185,6 +218,13 @@ public class TicketService {
         IncidentTicket updated = ticketRepository.save(ticket);
         log.info("Ticket #{} assigned to technician '{}' by admin '{}'",
                 ticketId, technician.getEmail(), currentUser.getEmail());
+
+        notificationService.sendNotification(
+            technician,
+            "You have been assigned to ticket #" + ticket.getId(),
+            "TICKET_UPDATE"
+        );
+
         return mapToResponse(updated);
     }
 
@@ -224,8 +264,18 @@ public class TicketService {
      */
     public void deleteTicket(Long id, User currentUser) {
         IncidentTicket ticket = findTicketOrThrow(id);
+        
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isCreator = ticket.getCreatedBy().getId().equals(currentUser.getId());
+        boolean isOpen = ticket.getStatus() == TicketStatus.OPEN;
+
+        if (!isAdmin && !(isCreator && isOpen)) {
+            throw new AccessDeniedException("You are not authorized to delete this ticket. " +
+                    (isCreator ? "Tickets can only be deleted while they are OPEN." : "Only the admin or creator may delete tickets."));
+        }
+
         ticketRepository.delete(ticket);
-        log.info("Ticket #{} deleted by admin '{}'", id, currentUser.getEmail());
+        log.info("Ticket #{} deleted by user '{}'", id, currentUser.getEmail());
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -251,6 +301,15 @@ public class TicketService {
         TicketComment saved = commentRepository.save(comment);
         log.info("Comment #{} added to ticket #{} by '{}'",
                 saved.getId(), ticketId, currentUser.getEmail());
+
+        if (!currentUser.getId().equals(ticket.getCreatedBy().getId())) {
+            notificationService.sendNotification(
+                ticket.getCreatedBy(),
+                "New comment added on your ticket #" + ticket.getId(),
+                "COMMENT_ADDED"
+            );
+        }
+
         return mapToCommentResponse(saved);
     }
 
