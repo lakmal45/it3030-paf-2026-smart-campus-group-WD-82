@@ -4,7 +4,7 @@ import ticketService from "../../services/ticketService";
 import { useAuth } from "../../context/AuthContext";
 import StatusBadge from "./StatusBadge";
 import CommentSection from "./CommentSection";
-import { ArrowLeft, Clock, MapPin, User, Tag, Key, CheckCircle2, AlertCircle, Wrench, Calendar, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, User, Tag, Key, CheckCircle2, AlertCircle, Wrench, Calendar, Trash2, Image as ImageIcon, Pencil } from "lucide-react";
 
 /**
  * Renders full ticket details. Used by User, Admin, and Technician.
@@ -25,8 +25,10 @@ const TicketDetail = () => {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Assign technician state (ADMIN only)
+  const [technicians, setTechnicians] = useState([]);
   const [technicianId, setTechnicianId] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchTicket = async () => {
     try {
@@ -41,8 +43,19 @@ const TicketDetail = () => {
     }
   };
 
+  const fetchTechnicians = async () => {
+    if (user?.role !== "ADMIN") return;
+    try {
+      const { data } = await ticketService.getTechnicians();
+      setTechnicians(data);
+    } catch (err) {
+      console.error("Failed to load technicians", err);
+    }
+  };
+
   useEffect(() => {
     fetchTicket();
+    fetchTechnicians();
   }, [id]);
 
   const handleUpdateStatus = async (e) => {
@@ -74,6 +87,19 @@ const TicketDetail = () => {
       alert(err.response?.data?.message || "Failed to assign technician");
     } finally {
       setIsAssigning(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this ticket? This action cannot be undone.")) return;
+    
+    setIsDeleting(true);
+    try {
+      await ticketService.deleteTicket(id);
+      navigate(-1);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete ticket");
+      setIsDeleting(false);
     }
   };
 
@@ -119,6 +145,15 @@ const TicketDetail = () => {
                   </div>
                   <h1 className="text-2xl font-bold text-slate-800 tracking-tight leading-snug">{ticket.description}</h1>
                </div>
+
+                {(isAdmin || (ticket.status === 'OPEN' && ticket.createdById === user?.id)) && (
+                   <button
+                     onClick={() => navigate(`./edit`)}
+                     className="p-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-100 flex items-center gap-2 font-bold text-sm"
+                   >
+                     <Pencil size={16} /> Edit
+                   </button>
+                )}
              </div>
 
              <div className="flex flex-wrap gap-y-4 gap-x-8 pb-6 border-b border-slate-100">
@@ -193,19 +228,24 @@ const TicketDetail = () => {
                 <ImageIcon size={18} className="text-slate-400" /> Attachments
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {ticket.imageUrls.map((url, i) => (
-                  <a key={i} href={API_BASE + url} target="_blank" rel="noreferrer" className="block relative aspect-video rounded-xl overflow-hidden border border-slate-200 group bg-slate-50">
-                     <img 
-                       src={API_BASE + url} 
-                       alt={`Attachment ${i}`}
-                       className="w-full h-full object-cover px-1"
-                       onError={(e) => { e.target.src = "https://via.placeholder.com/300?text=Image+Not+Found" }}
-                     />
-                     <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                       <span className="text-white text-xs font-bold tracking-wider uppercase">View Full</span>
-                     </div>
-                  </a>
-                ))}
+                {ticket.imageUrls.map((url, i) => {
+                  const isAbsolute = url.startsWith("http");
+                  const fullUrl = isAbsolute ? url : API_BASE + url;
+                  
+                  return (
+                    <a key={i} href={fullUrl} target="_blank" rel="noreferrer" className="block relative aspect-video rounded-xl overflow-hidden border border-slate-200 group bg-slate-50">
+                       <img 
+                         src={fullUrl} 
+                         alt={`Attachment ${i}`}
+                         className="w-full h-full object-cover px-1"
+                         onError={(e) => { e.target.src = "https://placehold.co/300?text=Image+Not+Found" }}
+                       />
+                       <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                         <span className="text-white text-xs font-bold tracking-wider uppercase">View Full</span>
+                       </div>
+                    </a>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -251,17 +291,22 @@ const TicketDetail = () => {
 
              {isAdmin && !['CLOSED', 'REJECTED'].includes(ticket.status) && (
                <form onSubmit={handleAssign} className="mt-6">
-                 <label className="block text-xs font-bold text-slate-600 mb-2">Reassign / Assign to ID:</label>
+                 <label className="block text-xs font-bold text-slate-600 mb-2">Assign to Technician:</label>
                  <div className="flex gap-2">
-                   <input
-                     type="number"
-                     placeholder="Tech ID"
+                   <select
                      value={technicianId}
                      onChange={(e) => setTechnicianId(e.target.value)}
-                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                   />
+                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                   >
+                     <option value="">Select Technician</option>
+                     {technicians.map(tech => (
+                       <option key={tech.id} value={tech.id}>
+                         {tech.name} (ID: {tech.id})
+                       </option>
+                     ))}
+                   </select>
                    <button
-                     disabled={isAssigning || !technicianId.trim()}
+                     disabled={isAssigning || !technicianId}
                      className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm rounded-xl transition-colors disabled:opacity-50 shadow-sm whitespace-nowrap"
                    >
                      Assign
@@ -271,7 +316,7 @@ const TicketDetail = () => {
              )}
           </div>
 
-          {canUpdateStatus && !['CLOSED', 'REJECTED'].includes(ticket.status) && (
+           {canUpdateStatus && !['CLOSED', 'REJECTED'].includes(ticket.status) && (
              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
                <h3 className="text-sm font-bold text-slate-800 mb-4 pb-4 border-b border-slate-100 uppercase tracking-widest text-center">
                  Update Status
@@ -312,7 +357,24 @@ const TicketDetail = () => {
                </form>
                <p className="text-[10px] text-slate-400 text-center mt-3 font-medium">Valid transitions are strictly enforced.</p>
              </div>
-          )}
+           )}
+
+           {/* Delete Ticket Button Section */}
+           {(isAdmin || (ticket.createdById === user?.id && ticket.status === 'OPEN')) && (
+             <div className="bg-rose-50 rounded-3xl p-6 border border-rose-100/50">
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl transition-all shadow-md shadow-rose-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Trash2 size={18} />
+                  {isDeleting ? "Deleting..." : "Delete Ticket"}
+                </button>
+                <p className="text-[10px] text-rose-400 text-center mt-3 font-medium">
+                  {isAdmin ? "Admin privilege: Hard delete" : "This will permanently remove the ticket."}
+                </p>
+             </div>
+           )}
         </div>
       </div>
     </div>

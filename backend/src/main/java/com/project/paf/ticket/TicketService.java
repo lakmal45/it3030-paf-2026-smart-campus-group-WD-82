@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Objects;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -84,6 +85,39 @@ public class TicketService {
     }
 
     /**
+     * Updates an existing ticket's details.
+     * Allowed only for the creator (while OPEN) or an ADMIN.
+     *
+     * @param id          target ticket
+     * @param request     new details
+     * @param currentUser authenticated caller
+     * @return updated ticket
+     */
+    public TicketResponse updateTicket(Long id, UpdateTicketRequest request, User currentUser) {
+        IncidentTicket ticket = findTicketOrThrow(id);
+
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isCreator = ticket.getCreatedBy() != null && Objects.equals(ticket.getCreatedBy().getId(), currentUser.getId());
+        boolean isOpen = ticket.getStatus() == TicketStatus.OPEN;
+
+        if (!isAdmin && !(isCreator && isOpen)) {
+            throw new AccessDeniedException("You are not authorised to edit this ticket. " +
+                    (isCreator ? "Tickets can only be edited while they are OPEN." : "Only the admin or creator may edit tickets."));
+        }
+
+        ticket.setLocation(request.getLocation());
+        ticket.setCategory(request.getCategory());
+        ticket.setDescription(request.getDescription());
+        ticket.setPriority(request.getPriority());
+        ticket.setPreferredContact(request.getPreferredContact());
+        ticket.setResourceId(request.getResourceId());
+
+        IncidentTicket updated = ticketRepository.save(ticket);
+        log.info("Ticket #{} updated by user '{}'", id, currentUser.getEmail());
+        return mapToResponse(updated);
+    }
+
+    /**
      * Retrieves a single ticket by its ID.
      *
      * @param id ticket primary key
@@ -104,31 +138,49 @@ public class TicketService {
      *   <li>USER → only their own tickets (with optional status filter).</li>
      * </ul>
      *
-     * @param statusFilter optional status string to filter by
-     * @param currentUser  the authenticated caller
+     * @param statusFilter   optional status string to filter by
+     * @param categoryFilter optional category string to filter by
+     * @param priorityFilter optional priority string to filter by
+     * @param currentUser    the authenticated caller
      * @return list of {@link TicketResponse}
      */
     @Transactional(readOnly = true)
-    public List<TicketResponse> getAllTickets(String statusFilter, User currentUser) {
-        boolean isPrivileged = currentUser.getRole() == Role.ADMIN
-                || currentUser.getRole() == Role.TECHNICIAN
+    public List<TicketResponse> getAllTickets(String statusFilter, String categoryFilter, String priorityFilter, User currentUser) {
+        boolean isAdminOrManager = currentUser.getRole() == Role.ADMIN
                 || currentUser.getRole() == Role.MANAGER;
+        boolean isTechnician = currentUser.getRole() == Role.TECHNICIAN;
 
         List<IncidentTicket> tickets;
 
         if (statusFilter != null && !statusFilter.isBlank()) {
             TicketStatus status = parseStatus(statusFilter);
-            if (isPrivileged) {
+            if (isAdminOrManager) {
                 tickets = ticketRepository.findByStatus(status);
+            } else if (isTechnician) {
+                tickets = ticketRepository.findByAssignedTechnicianAndStatus(currentUser, status);
             } else {
                 tickets = ticketRepository.findByCreatedByAndStatus(currentUser, status);
             }
         } else {
-            if (isPrivileged) {
+            if (isAdminOrManager) {
                 tickets = ticketRepository.findAll();
+            } else if (isTechnician) {
+                tickets = ticketRepository.findByAssignedTechnician(currentUser);
             } else {
                 tickets = ticketRepository.findByCreatedBy(currentUser);
             }
+        }
+
+        if (categoryFilter != null && !categoryFilter.isBlank()) {
+            tickets = tickets.stream()
+                             .filter(t -> t.getCategory().equalsIgnoreCase(categoryFilter))
+                             .collect(Collectors.toList());
+        }
+
+        if (priorityFilter != null && !priorityFilter.isBlank()) {
+            tickets = tickets.stream()
+                             .filter(t -> t.getPriority().equalsIgnoreCase(priorityFilter))
+                             .collect(Collectors.toList());
         }
 
         return tickets.stream().map(this::mapToResponse).collect(Collectors.toList());
@@ -155,6 +207,10 @@ public class TicketService {
     public TicketResponse updateTicketStatus(Long id,
                                              UpdateTicketStatusRequest request,
                                              User currentUser) {
+        if (currentUser.getRole() == Role.USER) {
+            throw new AccessDeniedException("Only ADMIN or TECHNICIAN can update ticket status.");
+        }
+
         IncidentTicket ticket = findTicketOrThrow(id);
         TicketStatus current = ticket.getStatus();
         TicketStatus next = request.getStatus();
@@ -187,10 +243,18 @@ public class TicketService {
      * @throws ResourceNotFoundException if the technician user does not exist
      */
     public TicketResponse assignTechnician(Long ticketId, Long technicianId, User currentUser) {
+        if (currentUser.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Only ADMIN can assign technicians.");
+        }
+
         IncidentTicket ticket = findTicketOrThrow(ticketId);
-        User technician = userRepository.findById(technicianId)
+        User technician = userRepository.findById(Objects.requireNonNull(technicianId))
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Technician not found with id: " + technicianId));
+
+        if (technician.getRole() != Role.TECHNICIAN) {
+            throw new IllegalArgumentException("User with id " + technicianId + " is not a Technician.");
+        }
 
         ticket.setAssignedTechnician(technician);
         // Automatically move ticket to IN_PROGRESS when assigned
@@ -201,6 +265,13 @@ public class TicketService {
         IncidentTicket updated = ticketRepository.save(ticket);
         log.info("Ticket #{} assigned to technician '{}' by admin '{}'",
                 ticketId, technician.getEmail(), currentUser.getEmail());
+
+        notificationService.sendNotification(
+            technician,
+            "You have been assigned to ticket #" + ticket.getId(),
+            "TICKET_UPDATE"
+        );
+
         return mapToResponse(updated);
     }
 
@@ -240,8 +311,18 @@ public class TicketService {
      */
     public void deleteTicket(Long id, User currentUser) {
         IncidentTicket ticket = findTicketOrThrow(id);
+        
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isCreator = ticket.getCreatedBy() != null && Objects.equals(ticket.getCreatedBy().getId(), currentUser.getId());
+        boolean isOpen = ticket.getStatus() == TicketStatus.OPEN;
+
+        if (!isAdmin && !(isCreator && isOpen)) {
+            throw new AccessDeniedException("You are not authorized to delete this ticket. " +
+                    (isCreator ? "Tickets can only be deleted while they are OPEN." : "Only the admin or creator may delete tickets."));
+        }
+
         ticketRepository.delete(ticket);
-        log.info("Ticket #{} deleted by admin '{}'", id, currentUser.getEmail());
+        log.info("Ticket #{} deleted by user '{}'", id, currentUser.getEmail());
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -333,17 +414,17 @@ public class TicketService {
     // ─────────────────────────────────────────────────────────────────────────
 
     private IncidentTicket findTicketOrThrow(Long id) {
-        return ticketRepository.findById(id)
+        return ticketRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with id: " + id));
     }
 
     private TicketComment findCommentOrThrow(Long id) {
-        return commentRepository.findById(id)
+        return commentRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found with id: " + id));
     }
 
     private void assertOwnerOrAdmin(User author, User currentUser, String action) {
-        boolean isOwner = author.getId().equals(currentUser.getId());
+        boolean isOwner = author != null && Objects.equals(author.getId(), currentUser.getId());
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
         if (!isOwner && !isAdmin) {
             throw new AccessDeniedException(

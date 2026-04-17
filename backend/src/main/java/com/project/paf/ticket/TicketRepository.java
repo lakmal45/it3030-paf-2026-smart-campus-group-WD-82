@@ -1,10 +1,7 @@
 package com.project.paf.ticket;
-
 import com.project.paf.modules.user.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
-import com.project.paf.modules.user.model.User;
 
 import java.util.List;
 
@@ -23,9 +20,13 @@ public interface TicketRepository extends JpaRepository<IncidentTicket, Long> {
     /** Find all tickets assigned to a specific technician. */
     List<IncidentTicket> findByAssignedTechnician(User technician);
 
+    /** Find tickets assigned to a specific technician with a specific status. */
+    List<IncidentTicket> findByAssignedTechnicianAndStatus(User technician, TicketStatus status);
+
     /** Find all tickets of a specific category (e.g. ELECTRICAL, PLUMBING). */
     List<IncidentTicket> findByCategory(String category);
 
     /** Find tickets created by a user with a specific status. */
     List<IncidentTicket> findByCreatedByAndStatus(User user, TicketStatus status);
 }
+

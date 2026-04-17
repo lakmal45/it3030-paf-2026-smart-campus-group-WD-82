@@ -22,6 +22,8 @@ import UserDashboard from "./pages/user/UserDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import TechnicianDashboard from "./pages/technician/TechnicianDashboard";
+import ResourceUserDashboard from "./pages/user/ResourceUserDashboard";
+import ResourceAdminDashboard from "./pages/admin/ResourceAdminDashboard";
 
 // Notifications
 import NotificationsPage from "./pages/NotificationsPage";
@@ -31,12 +33,14 @@ import MyBookings from "./pages/user/MyBookings";
 import CreateBooking from "./pages/user/CreateBooking";
 import MyTickets from "./pages/user/MyTickets";
 import CreateTicketForm from "./components/tickets/CreateTicketForm";
+import EditTicketForm from "./components/tickets/EditTicketForm";
 import TicketDetail from "./components/tickets/TicketDetail";
 
 // Admin Pages
 import UserManagement from "./pages/admin/UserManagement";
 import SystemSettings from "./pages/admin/SystemSettings";
 import AllTickets from "./pages/admin/AllTickets";
+import AllBookings from "./pages/admin/AllBookings";
 
 // Manager Pages
 import Reports from "./pages/manager/Reports";
@@ -98,227 +102,293 @@ function App() {
               {/* The index route does the smart role redirection */}
               <Route index element={<RoleBasedRedirect />} />
 
-              {/* User Routes */}
-              <Route path="user">
-                <Route
-                  index
-                  element={
-                    <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
-                      <UserDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="bookings"
-                  element={
-                    <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
-                      <MyBookings />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="create-booking"
-                  element={
-                    <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
-                      <CreateBooking />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="tickets"
-                  element={
-                    <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
-                      <MyTickets />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="tickets/new"
-                  element={
-                    <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
-                      <CreateTicketForm />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="tickets/:id"
-                  element={
-                    <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
-                      <TicketDetail />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="resources"
-                  element={
-                    <ProtectedRoute
-                      allowedRoles={[
-                        "USER",
-                        "ROLE_USER",
-                        "ADMIN",
-                        "ROLE_ADMIN",
-                        "MANAGER",
-                        "ROLE_MANAGER",
-                      ]}
-                    >
-                      <ResourceListPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="resources"
-                  element={
-                    <ProtectedRoute
-                      allowedRoles={[
-                        "USER",
-                        "ROLE_USER",
-                        "ADMIN",
-                        "ROLE_ADMIN",
-                        "MANAGER",
-                        "ROLE_MANAGER",
-                      ]}
-                    >
-                      <ResourceDetailPage />
-                    </ProtectedRoute>
-                  }
-                />
-              </Route>
+            {/* User Routes */}
+            <Route path="user">
+              <Route
+                index
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <UserDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="bookings"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <MyBookings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="create-booking"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <CreateBooking />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <MyTickets />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets/new"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <CreateTicketForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets/:id/edit"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <EditTicketForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <TicketDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={[
+                      "USER",
+                      "ROLE_USER",
+                      "ADMIN",
+                      "ROLE_ADMIN",
+                      "MANAGER",
+                      "ROLE_MANAGER",
+                    ]}
+                  >
+                    <ResourceListPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/new"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={[
+                      "USER",
+                      "ROLE_USER",
+                      "ADMIN",
+                      "ROLE_ADMIN",
+                      "MANAGER",
+                      "ROLE_MANAGER",
+                    ]}
+                  >
+                    <ResourceFormPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/:id"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={[
+                      "USER",
+                      "ROLE_USER",
+                      "ADMIN",
+                      "ROLE_ADMIN",
+                      "MANAGER",
+                      "ROLE_MANAGER",
+                    ]}
+                  >
+                    <ResourceDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/:id/edit"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={[
+                      "USER",
+                      "ROLE_USER",
+                      "ADMIN",
+                      "ROLE_ADMIN",
+                      "MANAGER",
+                      "ROLE_MANAGER",
+                    ]}
+                  >
+                    <ResourceFormPage />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
 
-              {/* Admin Routes */}
-              <Route path="admin">
-                <Route
-                  index
-                  element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
-                      <AdminDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="users"
-                  element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
-                      <UserManagement />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="settings"
-                  element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
-                      <SystemSettings />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="tickets"
-                  element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
-                      <AllTickets />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="tickets/:id"
-                  element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
-                      <TicketDetail />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="resources"
-                  element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
-                      <ResourceListPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="resources/new"
-                  element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
-                      <ResourceFormPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="resources/:id"
-                  element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
-                      <ResourceDetailPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="resources/:id/edit"
-                  element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
-                      <ResourceFormPage />
-                    </ProtectedRoute>
-                  }
-                />
-              </Route>
+            {/* Admin Routes */}
+            <Route path="admin">
+              <Route
+                index
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="users"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <UserManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="settings"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <SystemSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <AllTickets />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <TicketDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets/:id/edit"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <EditTicketForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <ResourceListPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/new"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <ResourceFormPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <ResourceDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/:id/edit"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <ResourceFormPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="bookings"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <AllBookings />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
 
-              {/* Manager Routes */}
-              <Route path="manager">
-                <Route
-                  index
-                  element={
-                    <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
-                      <ManagerDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="reports"
-                  element={
-                    <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
-                      <Reports />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="analytics"
-                  element={
-                    <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
-                      <BookingAnalytics />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="maintenance"
-                  element={
-                    <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
-                      <Maintenance />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="resources"
-                  element={
-                    <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
-                      <ResourceListPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="resources/:id"
-                  element={
-                    <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
-                      <ResourceDetailPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="resources/:id/edit"
-                  element={
-                    <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
-                      <ResourceFormPage />
-                    </ProtectedRoute>
-                  }
-                />
-              </Route>
+            {/* Manager Routes */}
+            <Route path="manager">
+              <Route
+                index
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                    <ManagerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="reports"
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                    <Reports />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="analytics"
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                    <BookingAnalytics />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="maintenance"
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                    <Maintenance />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources"
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                    <ResourceListPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/new"
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                    <ResourceFormPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                    <ResourceDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/:id/edit"
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                    <ResourceFormPage />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
 
               {/* Technician Routes */}
               <Route path="technician">
@@ -379,6 +449,28 @@ function App() {
               <Route path="settings" element={<Settings />} />
               <Route path="notifications" element={<NotificationsPage />} />
             </Route>
+            {/* Resource-Specific Dashboard Routes */}
+            <Route
+              path="user/resource-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                  <ResourceUserDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/resource-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                  <ResourceAdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Shared Dashboard Routes */}
+            <Route path="profile" element={<GeneralProfile />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
 
             {/* Fallback Unauthorized/Not Found */}
             <Route

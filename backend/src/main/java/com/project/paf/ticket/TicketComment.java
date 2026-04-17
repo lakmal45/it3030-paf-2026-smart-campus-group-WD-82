@@ -3,7 +3,6 @@ package com.project.paf.ticket;
 import java.time.LocalDateTime;
 
 import com.project.paf.modules.user.model.User;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -14,8 +13,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import com.project.paf.modules.user.model.User;
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 

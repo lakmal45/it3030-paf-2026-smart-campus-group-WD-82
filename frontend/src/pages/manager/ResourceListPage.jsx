@@ -16,7 +16,8 @@ import {
   Clock, 
   AlertTriangle,
   Building2,
-  FilterX
+  FilterX,
+  MapPin
 } from "lucide-react";
 
 const ResourceListPage = () => {
@@ -127,69 +128,70 @@ const ResourceListPage = () => {
   };
 
   return (
-    <div className="p-6 lg:p-10 space-y-10 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div className="p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 space-y-6 sm:space-y-8 lg:space-y-10 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
         <div>
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
-              <Building2 className="h-6 w-6 text-white" />
+          <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
+            <div className="p-2 bg-blue-600 rounded-lg sm:rounded-xl shadow-lg shadow-blue-100 sm:shadow-blue-200">
+              <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
-            <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter">Resources</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter">Resources</h1>
           </div>
-          <p className="text-slate-500 font-medium max-w-md">Browse and manage the campus infrastructure, equipment, and learning spaces.</p>
+          <p className="text-slate-500 font-medium text-xs sm:text-sm lg:text-base max-w-md">Browse and manage the campus infrastructure, equipment, and learning spaces.</p>
         </div>
         
-        <div className="flex items-center space-x-4 w-full md:w-auto">
-          <div className="hidden sm:flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+        <div className="flex items-center space-x-2 sm:space-x-4 w-full md:w-auto">
+          <div className="hidden sm:flex bg-slate-100 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border border-slate-200 shadow-inner">
             <button
               onClick={() => setViewMode("table")}
-              className={`p-2 rounded-xl transition-all ${viewMode === "table" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+              className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all ${viewMode === "table" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
               title="Table View"
             >
-              <Table className="h-5 w-5" />
+              <Table className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
             <button
               onClick={() => setViewMode("card")}
-              className={`p-2 rounded-xl transition-all ${viewMode === "card" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+              className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all ${viewMode === "card" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
               title="Card View"
             >
-              <LayoutGrid className="h-5 w-5" />
+              <LayoutGrid className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
           {canModify && (
             <button
               onClick={handleAddClick}
-              className="flex-1 md:flex-none bg-slate-900 text-white px-6 py-3.5 rounded-2xl hover:bg-black active:scale-[0.98] transition-all shadow-xl shadow-slate-200 font-black flex items-center justify-center space-x-2"
+              className="flex-1 md:flex-none bg-slate-900 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-2xl hover:bg-black active:scale-[0.98] transition-all shadow-lg sm:shadow-xl shadow-slate-200 font-black flex items-center justify-center space-x-1.5 sm:space-x-2 text-sm sm:text-base"
             >
-              <Plus className="h-5 w-5" />
-              <span>NEW ASSET</span>
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">NEW ASSET</span>
+              <span className="sm:hidden">ADD</span>
             </button>
           )}
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+      <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm">
         <ResourceFilters onSearch={fetchResources} />
       </div>
 
       {isLoading ? (
-        <div className="flex flex-col justify-center items-center h-80 space-y-4">
+        <div className="flex flex-col justify-center items-center h-64 sm:h-80 space-y-4 px-4">
           <div className="relative">
-            <div className="w-16 h-16 border-4 border-slate-100 rounded-full"></div>
-            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+            <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-slate-100 rounded-full"></div>
+            <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
           </div>
-          <p className="text-slate-400 font-extrabold tracking-widest text-xs uppercase">Syncing Cloud Data</p>
+          <p className="text-slate-400 font-extrabold tracking-widest text-[10px] sm:text-xs uppercase">Syncing Cloud Data</p>
         </div>
       ) : error ? (
-        <div className="py-24 text-center bg-rose-50 rounded-[3rem] border border-rose-100 shadow-sm border-dashed">
-          <div className="bg-rose-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-            <AlertTriangle className="h-10 w-10 text-rose-500" />
+        <div className="py-12 sm:py-16 md:py-24 text-center bg-rose-50 rounded-xl sm:rounded-2xl md:rounded-[3rem] border border-rose-100 shadow-sm border-dashed px-4">
+          <div className="bg-rose-100 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+            <AlertTriangle className="h-8 w-8 sm:h-10 sm:w-10 text-rose-500" />
           </div>
-          <h3 className="text-2xl font-black text-rose-900 tracking-tight mb-2">Fetch Error</h3>
-          <p className="text-rose-600/80 font-medium max-w-sm mx-auto mb-6">{error}</p>
+          <h3 className="text-lg sm:text-xl md:text-2xl font-black text-rose-900 tracking-tight mb-2">Fetch Error</h3>
+          <p className="text-rose-600/80 font-medium text-xs sm:text-sm max-w-sm mx-auto mb-4 sm:mb-6">{error}</p>
           <button 
             onClick={() => fetchResources()}
-            className="inline-flex items-center px-6 py-3 bg-rose-600 text-white font-bold rounded-2xl hover:bg-rose-700 transition shadow-lg shadow-rose-200 active:scale-95"
+            className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-rose-600 text-white font-bold text-sm sm:text-base rounded-lg sm:rounded-2xl hover:bg-rose-700 transition shadow-lg shadow-rose-200 active:scale-95"
           >
             Retry Request
           </button>
@@ -248,8 +250,9 @@ const ResourceListPage = () => {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100">
+          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full divide-y divide-slate-100">
               <thead className="bg-slate-50/50">
                 <tr>
                   <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Asset Identity</th>
@@ -328,6 +331,7 @@ const ResourceListPage = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )
       ) : (

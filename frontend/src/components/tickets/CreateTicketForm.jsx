@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ticketService from "../../services/ticketService";
+import resourceService from "../../services/resourceService";
 import ImageUpload from "./ImageUpload";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
@@ -18,12 +19,41 @@ const CreateTicketForm = () => {
     resourceId: "",
   });
   const [files, setFiles] = useState([]);
+  const [resources, setResources] = useState([]);
   const [status, setStatus] = useState({ type: "", message: "" }); // type: 'error' | 'success'
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const data = await resourceService.getAllResources();
+        setResources(data);
+      } catch (err) {
+        console.error("Failed to load resources", err);
+      }
+    };
+    fetchResources();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleResourceChange = (e) => {
+    const resId = e.target.value;
+    if (!resId) {
+      setFormData(prev => ({ ...prev, location: "", resourceId: "" }));
+      return;
+    }
+    const selectedRes = resources.find(r => r.id.toString() === resId);
+    if (selectedRes) {
+      setFormData(prev => ({
+        ...prev,
+        location: `${selectedRes.name} - ${selectedRes.location}`,
+        resourceId: selectedRes.id.toString()
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -31,16 +61,29 @@ const CreateTicketForm = () => {
     setStatus({ type: "", message: "" });
     setIsSubmitting(true);
 
+    let createdTicketId = null;
+
     try {
       // 1. Create ticket
       const { data } = await ticketService.create(formData);
-      
+      createdTicketId = data.id;
+    } catch (err) {
+      console.error(err);
+      setStatus({ 
+        type: "error", 
+        message: err.response?.data?.message || err.response?.data?.error || "Failed to create ticket. Please try again." 
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
       // 2. Upload images if any
       if (files.length > 0) {
-        await ticketService.uploadImages(data.id, files);
+        await ticketService.uploadImages(createdTicketId, files);
       }
 
-      setStatus({ type: "success", message: `Ticket #${data.id} submitted successfully.` });
+      setStatus({ type: "success", message: `Ticket #${createdTicketId} submitted successfully.` });
       
       // Redirect after brief delay
       setTimeout(() => {
@@ -49,9 +92,10 @@ const CreateTicketForm = () => {
 
     } catch (err) {
       console.error(err);
+      const backendError = err.response?.data?.message || err.response?.data?.error || err.message;
       setStatus({ 
         type: "error", 
-        message: err.response?.data?.message || err.response?.data?.error || "Failed to create ticket. Please try again." 
+        message: `Ticket created successfully, but image upload failed: ${backendError}. Please try re-uploading the image.` 
       });
       setIsSubmitting(false);
     }
@@ -76,18 +120,26 @@ const CreateTicketForm = () => {
       <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {/* Location */}
+          {/* Location / Resource Select */}
           <div className="col-span-1 md:col-span-2">
             <label className="block text-sm font-bold text-slate-700 mb-2">Location / Room <span className="text-rose-500">*</span></label>
-            <input
+            <select
               required
-              type="text"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              placeholder="e.g. Building A, Room 101"
+              name="resourceSelect"
+              value={formData.resourceId}
+              onChange={handleResourceChange}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50"
-            />
+            >
+              <option value="">Select a Location/Room</option>
+              {resources.map(res => (
+                <option key={res.id} value={res.id}>
+                  {res.name} ({res.location})
+                </option>
+              ))}
+            </select>
+            {formData.location && (
+              <p className="mt-2 text-xs text-indigo-600 font-medium">Selected: {formData.location}</p>
+            )}
           </div>
 
           {/* Category */}
@@ -150,14 +202,14 @@ const CreateTicketForm = () => {
                 />
              </div>
              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Resource ID <span className="font-normal text-slate-400">(Optional)</span></label>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Resource ID <span className="font-normal text-slate-400">(Auto-filled)</span></label>
                 <input
                   type="text"
                   name="resourceId"
                   value={formData.resourceId}
-                  onChange={handleChange}
-                  placeholder="e.g. ASSET-1024"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50"
+                  readOnly
+                  placeholder="Select a location above"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
                 />
              </div>
           </div>

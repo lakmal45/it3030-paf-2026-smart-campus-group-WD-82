@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("null")
 @RestController
 @RequestMapping("/api/admin")
 @CrossOrigin(originPatterns = "http://localhost:*")
@@ -66,6 +67,16 @@ public class AdminController {
 
         requireAdmin(session, emailHeader);
         return ResponseEntity.ok(repo.findAll());
+    }
+
+    // ── GET all technicians ───────────────────────────────────────────────────
+    @GetMapping("/technicians")
+    public ResponseEntity<List<User>> getTechnicians(
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
+
+        requireAdmin(session, emailHeader);
+        return ResponseEntity.ok(repo.findByRole(Role.TECHNICIAN));
     }
 
     // ── UPDATE user role ──────────────────────────────────────────────────────

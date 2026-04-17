@@ -1,18 +1,30 @@
 package com.project.paf.ticket;
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * REST controller for the Maintenance & Incident Ticketing System.
@@ -22,6 +34,7 @@ import java.util.List;
  * <p>Authentication is enforced at the SecurityConfig level.
  * Fine-grained role checks use {@code @PreAuthorize} or are delegated to the service.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/tickets")
 public class TicketController {
@@ -61,11 +74,13 @@ public class TicketController {
     @GetMapping
     public ResponseEntity<List<TicketResponse>> getAllTickets(
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String priority,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
         User currentUser = resolveUser(session, emailHeader);
-        return ResponseEntity.ok(ticketService.getAllTickets(status, currentUser));
+        return ResponseEntity.ok(ticketService.getAllTickets(status, category, priority, currentUser));
     }
 
     /**
@@ -74,6 +89,21 @@ public class TicketController {
     @GetMapping("/{id}")
     public ResponseEntity<TicketResponse> getTicketById(@PathVariable Long id) {
         return ResponseEntity.ok(ticketService.getTicketById(id));
+    }
+
+    /**
+     * PUT /api/tickets/{id} — Update ticket details (location, description, etc.).
+     * Only the creator (if OPEN) or an ADMIN can call this.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<TicketResponse> updateTicket(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateTicketRequest request,
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
+
+        User currentUser = resolveUser(session, emailHeader);
+        return ResponseEntity.ok(ticketService.updateTicket(id, request, currentUser));
     }
 
     /**
@@ -120,7 +150,6 @@ public class TicketController {
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
         User currentUser = resolveUser(session, emailHeader);
-        requireRoles(currentUser, Role.ADMIN);
         ticketService.deleteTicket(id, currentUser);
         return ResponseEntity.noContent().build();
     }
@@ -237,5 +266,23 @@ public class TicketController {
         if (!hasRole) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized: Role not matching.");
         }
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<java.util.Map<String, String>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.error("Validation error: {}", ex.getMessage());
+        java.util.Map<String, String> body = new java.util.HashMap<>();
+        body.put("error", "Validation Failed");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<java.util.Map<String, String>> handleAllExceptions(Exception ex) {
+        log.error("Internal Server Error: ", ex);
+        java.util.Map<String, String> body = new java.util.HashMap<>();
+        body.put("error", "Internal Server Error");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }
