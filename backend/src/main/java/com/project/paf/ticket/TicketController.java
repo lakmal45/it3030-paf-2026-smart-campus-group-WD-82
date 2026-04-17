@@ -93,6 +93,21 @@ public class TicketController {
     }
 
     /**
+     * PUT /api/tickets/{id} — Update ticket details (location, description, etc.).
+     * Only the creator (if OPEN) or an ADMIN can call this.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<TicketResponse> updateTicket(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateTicketRequest request,
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
+
+        User currentUser = resolveUser(session, emailHeader);
+        return ResponseEntity.ok(ticketService.updateTicket(id, request, currentUser));
+    }
+
+    /**
      * PUT /api/tickets/{id}/status — Update ticket status.
      * Only ADMIN or TECHNICIAN may call this endpoint.
      */

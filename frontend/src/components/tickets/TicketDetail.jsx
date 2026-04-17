@@ -4,7 +4,7 @@ import ticketService from "../../services/ticketService";
 import { useAuth } from "../../context/AuthContext";
 import StatusBadge from "./StatusBadge";
 import CommentSection from "./CommentSection";
-import { ArrowLeft, Clock, MapPin, User, Tag, Key, CheckCircle2, AlertCircle, Wrench, Calendar, Trash2, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, User, Tag, Key, CheckCircle2, AlertCircle, Wrench, Calendar, Trash2, Image as ImageIcon, Pencil } from "lucide-react";
 
 /**
  * Renders full ticket details. Used by User, Admin, and Technician.
@@ -133,6 +133,15 @@ const TicketDetail = () => {
                   </div>
                   <h1 className="text-2xl font-bold text-slate-800 tracking-tight leading-snug">{ticket.description}</h1>
                </div>
+
+                {(isAdmin || (ticket.status === 'OPEN' && ticket.createdById === user?.id)) && (
+                   <button
+                     onClick={() => navigate(`./edit`)}
+                     className="p-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-100 flex items-center gap-2 font-bold text-sm"
+                   >
+                     <Pencil size={16} /> Edit
+                   </button>
+                )}
              </div>
 
              <div className="flex flex-wrap gap-y-4 gap-x-8 pb-6 border-b border-slate-100">

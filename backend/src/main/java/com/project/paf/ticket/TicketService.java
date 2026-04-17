@@ -76,6 +76,39 @@ public class TicketService {
     }
 
     /**
+     * Updates an existing ticket's details.
+     * Allowed only for the creator (while OPEN) or an ADMIN.
+     *
+     * @param id          target ticket
+     * @param request     new details
+     * @param currentUser authenticated caller
+     * @return updated ticket
+     */
+    public TicketResponse updateTicket(Long id, UpdateTicketRequest request, User currentUser) {
+        IncidentTicket ticket = findTicketOrThrow(id);
+
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isCreator = ticket.getCreatedBy().getId().equals(currentUser.getId());
+        boolean isOpen = ticket.getStatus() == TicketStatus.OPEN;
+
+        if (!isAdmin && !(isCreator && isOpen)) {
+            throw new AccessDeniedException("You are not authorised to edit this ticket. " +
+                    (isCreator ? "Tickets can only be edited while they are OPEN." : "Only the admin or creator may edit tickets."));
+        }
+
+        ticket.setLocation(request.getLocation());
+        ticket.setCategory(request.getCategory());
+        ticket.setDescription(request.getDescription());
+        ticket.setPriority(request.getPriority());
+        ticket.setPreferredContact(request.getPreferredContact());
+        ticket.setResourceId(request.getResourceId());
+
+        IncidentTicket updated = ticketRepository.save(ticket);
+        log.info("Ticket #{} updated by user '{}'", id, currentUser.getEmail());
+        return mapToResponse(updated);
+    }
+
+    /**
      * Retrieves a single ticket by its ID.
      *
      * @param id ticket primary key

@@ -29,6 +29,7 @@ import MyBookings from "./pages/user/MyBookings";
 import CreateBooking from "./pages/user/CreateBooking";
 import MyTickets from "./pages/user/MyTickets";
 import CreateTicketForm from "./components/tickets/CreateTicketForm";
+import EditTicketForm from "./components/tickets/EditTicketForm";
 import TicketDetail from "./components/tickets/TicketDetail";
 
 // Admin Pages
@@ -139,6 +140,14 @@ function App() {
                 }
               />
               <Route
+                path="tickets/:id/edit"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <EditTicketForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="tickets/:id"
                 element={
                   <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
@@ -229,6 +238,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
                     <TicketDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets/:id/edit"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <EditTicketForm />
                   </ProtectedRoute>
                 }
               />

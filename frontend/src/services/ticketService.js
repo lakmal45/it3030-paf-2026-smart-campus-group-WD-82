@@ -23,6 +23,9 @@ const ticketService = {
   /** Create a new ticket. */
   create: (data) => api.post("/tickets", data),
 
+  /** Update an existing ticket (location, description, etc.). */
+  update: (id, data) => api.put(`/tickets/${id}`, data),
+
   /** Update a ticket's status (and optionally resolution notes). */
   updateStatus: (id, status, resolutionNotes) =>
     api.put(`/tickets/${id}/status`, { status, resolutionNotes }),
