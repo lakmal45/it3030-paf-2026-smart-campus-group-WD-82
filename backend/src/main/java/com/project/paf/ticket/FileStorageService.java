@@ -18,6 +18,7 @@ import java.util.UUID;
  * <p>The upload root directory is configured via {@code file.upload-dir}
  * in {@code application.properties}.
  */
+@SuppressWarnings("null")
 @Service
 public class FileStorageService {
 

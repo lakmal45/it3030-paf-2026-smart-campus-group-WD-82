@@ -6,6 +6,7 @@ import com.project.paf.modules.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+@SuppressWarnings("null")
 @Service
 public class UserService {
 

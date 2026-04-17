@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
  *   <li>Image upload limits (max 3 per ticket).</li>
  * </ul>
  */
+@SuppressWarnings("null")
 @Slf4j
 @Service
 @Transactional

@@ -1,112 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Building2, 
-  Calendar, 
-  CheckCircle2, 
-  Clock, 
-  AlertTriangle, 
-  TrendingUp,
-  MapPin,
-  Users,
-  BookOpen,
-  Search,
-  ChevronRight,
-  Star,
-  Filter,
-  X
-} from 'lucide-react';
-import resourceService from '../../services/resourceService';
+import { Building2, MapPin, Users, CheckCircle2, AlertTriangle, Calendar, Search, ChevronRight } from 'lucide-react';
+import api from '../../services/api';
 
 const ResourceUserDashboard = () => {
   const [resources, setResources] = useState([]);
-  const [filteredResources, setFilteredResources] = useState([]);
+  const [stats, setStats] = useState({ total: 0, available: 0, booked: 0, maintenance: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [stats, setStats] = useState({
-    available: 0,
-    booked: 0,
-    maintenance: 0,
-    total: 0
-  });
-  const [resourceTypes, setResourceTypes] = useState([]);
 
   useEffect(() => {
-    fetchResources();
-  }, []);
+    const fetchResources = async () => {
+      setIsLoading(true);
+      try {
+        const response = await api.get('/api/resources');
+        const allResources = response.data;
+        
+        // Filter resources based on search term
+        const filteredResources = allResources.filter(resource => 
+          resource.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          resource.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          resource.location.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        
+        setResources(filteredResources);
 
-  useEffect(() => {
-    applyFilters();
-  }, [searchTerm, selectedType, selectedStatus, resources]);
+        // Calculate stats based on ALL resources, not filtered ones
+        const total = allResources.length;
+        const available = allResources.filter(r => r.status === 'ACTIVE' && r.available).length;
+        const booked = allResources.filter(r => r.status === 'ACTIVE' && !r.available).length;
+        const maintenance = allResources.filter(r => r.status === 'IN_MAINTENANCE').length;
+        setStats({ total, available, booked, maintenance });
 
-  const fetchResources = async () => {
-    try {
-      const data = await resourceService.getAllResources();
-      setResources(data);
-      
-      // Extract unique resource types
-      const types = [...new Set(data.map(r => r.type))];
-      setResourceTypes(types);
-      
-      // Calculate stats
-      const stats = {
-        available: data.filter(r => r.available && r.status === 'ACTIVE').length,
-        booked: data.filter(r => !r.available).length,
-        maintenance: data.filter(r => r.status === 'IN_MAINTENANCE').length,
-        total: data.length
-      };
-      setStats(stats);
-    } catch (err) {
-      console.error('Error fetching resources:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const applyFilters = () => {
-    let filtered = resources;
-
-    if (searchTerm) {
-      filtered = filtered.filter(r =>
-        r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.location.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (selectedType) {
-      filtered = filtered.filter(r => r.type === selectedType);
-    }
-
-    if (selectedStatus) {
-      if (selectedStatus === 'available') {
-        filtered = filtered.filter(r => r.available && r.status === 'ACTIVE');
-      } else if (selectedStatus === 'booked') {
-        filtered = filtered.filter(r => !r.available);
-      } else if (selectedStatus === 'maintenance') {
-        filtered = filtered.filter(r => r.status === 'IN_MAINTENANCE');
+      } catch (error) {
+        console.error("Error fetching resources:", error);
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
 
-    setFilteredResources(filtered);
-  };
+    // Debounce search
+    const handler = setTimeout(() => {
+      fetchResources();
+    }, 300);
 
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedType('');
-    setSelectedStatus('');
-  };
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
 
   const getStatusBadge = (status, available) => {
     if (status === 'ACTIVE' && available) {
-      return <span className="px-3 py-1 text-xs font-black rounded-full bg-emerald-100 text-emerald-700 flex items-center w-fit"><CheckCircle2 className="h-3 w-3 mr-1" /> Available</span>;
+      return <span className="px-3 py-1 text-xs font-black rounded-full bg-emerald-100 text-emerald-700 flex items-center w-fit"><CheckCircle2 className="h-3 w-3 mr-1" /> AVAILABLE</span>;
     }
-    if (!available) {
-      return <span className="px-3 py-1 text-xs font-black rounded-full bg-amber-100 text-amber-700 flex items-center w-fit"><Calendar className="h-3 w-3 mr-1" /> Booked</span>;
+    if (status === 'ACTIVE' && !available) {
+      return <span className="px-3 py-1 text-xs font-black rounded-full bg-amber-100 text-amber-700 flex items-center w-fit"><Calendar className="h-3 w-3 mr-1" /> BOOKED</span>;
     }
-    return <span className="px-3 py-1 text-xs font-black rounded-full bg-rose-100 text-rose-700 flex items-center w-fit"><AlertTriangle className="h-3 w-3 mr-1" /> {status?.replace(/_/g, ' ')}</span>;
+    if (status === 'IN_MAINTENANCE') {
+      return <span className="px-3 py-1 text-xs font-black rounded-full bg-rose-100 text-rose-700 flex items-center w-fit"><AlertTriangle className="h-3 w-3 mr-1" /> MAINTENANCE</span>;
+    }
+    return <span className="px-3 py-1 text-xs font-black rounded-full bg-slate-100 text-slate-700 flex items-center w-fit"><AlertTriangle className="h-3 w-3 mr-1" /> {status?.replace(/_/g, ' ')}</span>;
   };
 
   return (
@@ -172,98 +125,27 @@ const ResourceUserDashboard = () => {
         </div>
       </div>
 
-      {/* Search & Filter Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-4">
+      {/* Search Bar */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm">
         <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
           <Search className="h-5 w-5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search resources by name or location..."
+            placeholder="Search resources by name, type, or location..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1 bg-transparent outline-none text-slate-900 placeholder-slate-500 text-sm"
           />
         </div>
-
-        {/* Filter Toggle */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-700 font-bold text-sm transition-colors"
-        >
-          <Filter className="h-4 w-4" />
-          {showFilters ? 'Hide Filters' : 'Show Filters'}
-        </button>
-
-        {/* Advanced Filters */}
-        {showFilters && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
-            <div>
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-2">Resource Type</label>
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Types</option>
-                {resourceTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-2">Availability</label>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Status</option>
-                <option value="available">Available</option>
-                <option value="booked">Currently Booked</option>
-                <option value="maintenance">Under Maintenance</option>
-              </select>
-            </div>
-
-            {(searchTerm || selectedType || selectedStatus) && (
-              <button
-                onClick={clearFilters}
-                className="col-span-1 sm:col-span-2 flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 rounded-lg text-rose-600 font-bold text-sm transition-colors"
-              >
-                <X className="h-4 w-4" />
-                Clear All Filters
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Filter Summary */}
-        {(searchTerm || selectedType || selectedStatus) && (
-          <div className="flex items-center justify-between bg-blue-50 px-4 py-3 rounded-lg border border-blue-200">
-            <p className="text-sm font-bold text-blue-900">
-              Showing {filteredResources.length} of {resources.length} resources
-            </p>
-            <button
-              onClick={clearFilters}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-            >
-              <X className="h-3 w-3" /> Reset
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Featured Resources or Filtered Results */}
+      {/* Featured Resources */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-            {searchTerm || selectedType || selectedStatus ? 'Search Results' : 'Featured Resources'}
-          </h2>
-          {!(searchTerm || selectedType || selectedStatus) && (
-            <Link to="/dashboard/user/resources" className="text-blue-600 hover:text-blue-700 text-sm font-bold flex items-center gap-1">
-              View All <ChevronRight className="h-4 w-4" />
-            </Link>
-          )}
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900">Featured Resources</h2>
+          <Link to="/dashboard/user/resources" className="text-blue-600 hover:text-blue-700 text-sm font-bold flex items-center gap-1">
+            View All <ChevronRight className="h-4 w-4" />
+          </Link>
         </div>
 
         {isLoading ? (
@@ -272,23 +154,9 @@ const ResourceUserDashboard = () => {
               <div key={i} className="bg-slate-100 rounded-2xl h-64 animate-pulse"></div>
             ))}
           </div>
-        ) : filteredResources.length === 0 && (searchTerm || selectedType || selectedStatus) ? (
-          <div className="py-16 text-center bg-slate-50 rounded-2xl border border-slate-200 border-dashed">
-            <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="h-8 w-8 text-slate-400" />
-            </div>
-            <h3 className="text-lg font-black text-slate-900 mb-2">No Results Found</h3>
-            <p className="text-slate-600 text-sm mb-4">Try adjusting your filters or search terms</p>
-            <button
-              onClick={clearFilters}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <X className="h-4 w-4" /> Clear Filters
-            </button>
-          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(searchTerm || selectedType || selectedStatus ? filteredResources : resources.slice(0, 6)).map((resource) => (
+            {resources.map((resource) => (
               <Link
                 key={resource.id}
                 to={`/dashboard/user/resources/${resource.id}`}
