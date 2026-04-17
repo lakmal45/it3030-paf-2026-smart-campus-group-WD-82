@@ -4,6 +4,7 @@ import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
+import com.project.paf.modules.notification.service.AppNotificationService;
 import com.project.paf.modules.notification.service.EmailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
@@ -36,17 +37,20 @@ public class TicketService {
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final AppNotificationService appNotificationService;
 
     public TicketService(TicketRepository ticketRepository,
                          TicketCommentRepository commentRepository,
                          FileStorageService fileStorageService,
                          UserRepository userRepository,
-                         EmailService emailService) {
+                         EmailService emailService,
+                         AppNotificationService appNotificationService) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.appNotificationService = appNotificationService;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -266,10 +270,11 @@ public class TicketService {
         log.info("Ticket #{} assigned to technician '{}' by admin '{}'",
                 ticketId, technician.getEmail(), currentUser.getEmail());
 
-        notificationService.sendNotification(
+        appNotificationService.createNotification(
             technician,
+            "Ticket Assigned",
             "You have been assigned to ticket #" + ticket.getId(),
-            "TICKET_UPDATE"
+            "info"
         );
 
         return mapToResponse(updated);
