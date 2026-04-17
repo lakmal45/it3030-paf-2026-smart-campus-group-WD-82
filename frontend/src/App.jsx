@@ -37,6 +37,7 @@ import UserManagement from "./pages/admin/UserManagement";
 import RoleManagement from "./pages/admin/RoleManagement";
 import SystemSettings from "./pages/admin/SystemSettings";
 import AllTickets from "./pages/admin/AllTickets";
+import AllBookings from "./pages/admin/AllBookings";
 
 // Manager Pages
 import Reports from "./pages/manager/Reports";
@@ -278,6 +279,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
                     <ResourceFormPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="bookings"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <AllBookings />
                   </ProtectedRoute>
                 }
               />
