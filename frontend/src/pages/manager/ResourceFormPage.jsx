@@ -119,8 +119,11 @@ const ResourceFormPage = () => {
         showToast("Resource created successfully!");
       }
       
-      // Navigate back to list
-      const basePath = isAdmin ? "/dashboard/admin" : "/dashboard/manager";
+      // Navigate back to list based on role
+      let basePath = "/dashboard/user";
+      if (isAdmin) basePath = "/dashboard/admin";
+      else if (isManager) basePath = "/dashboard/manager";
+      
       navigate(`${basePath}/resources`);
     } catch (err) {
       console.error("Save error:", err);
@@ -143,7 +146,7 @@ const ResourceFormPage = () => {
   }
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 max-w-5xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
+    <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-5xl mx-auto space-y-8 sm:space-y-10 animate-in fade-in duration-500 pb-24">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-start sm:items-center gap-3 sm:gap-4">

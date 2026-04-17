@@ -34,20 +34,20 @@ const ResourceFilters = ({ onSearch }) => {
 
   return (
     <form onSubmit={handleSearch} className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-3">
           <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Asset Name</label>
           <input
             type="text"
             name="name"
             value={filters.name}
             onChange={handleChange}
-            placeholder="e.g. Room 101..."
+            placeholder="e.g. Room 101.."
             className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:outline-none font-medium text-slate-900 placeholder-slate-400"
           />
         </div>
 
-        <div>
+        <div className="lg:col-span-2">
           <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Category</label>
           <select
             name="type"
@@ -65,19 +65,19 @@ const ResourceFilters = ({ onSearch }) => {
           </select>
         </div>
 
-        <div>
+        <div className="lg:col-span-3">
           <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Location</label>
           <input
             type="text"
             name="location"
             value={filters.location}
             onChange={handleChange}
-            placeholder="e.g. Block A..."
+            placeholder="e.g. Block A.."
             className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:outline-none font-medium text-slate-900 placeholder-slate-400"
           />
         </div>
 
-        <div>
+        <div className="lg:col-span-2">
           <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Availability</label>
           <select
             name="available"
@@ -92,21 +92,21 @@ const ResourceFilters = ({ onSearch }) => {
           </select>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+        <div className="lg:col-span-2 flex flex-col sm:flex-row gap-2 sm:items-end">
           <button
             type="submit"
-            className="flex-1 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl transition-all shadow-lg shadow-blue-100 font-black flex items-center justify-center space-x-2 active:scale-95"
+            className="flex-1 px-4 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl transition-all shadow-lg shadow-blue-100 font-black flex items-center justify-center space-x-2 active:scale-95 whitespace-nowrap"
           >
-            <Search className="h-4 w-4" />
-            <span className="hidden sm:inline">Search</span>
+            <Search className="h-4 w-4 shrink-0" />
+            <span className="hidden xl:inline">Search</span>
           </button>
           <button
             type="button"
             onClick={handleReset}
-            className="flex-1 px-6 py-3.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-2xl transition-all font-black flex items-center justify-center space-x-2 active:scale-95"
+            className="flex-1 px-4 py-3.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-2xl transition-all font-black flex items-center justify-center space-x-2 active:scale-95 whitespace-nowrap"
           >
-            <RotateCcw className="h-4 w-4" />
-            <span className="hidden sm:inline">Reset</span>
+            <RotateCcw className="h-4 w-4 shrink-0" />
+            <span className="hidden xl:inline">Reset</span>
           </button>
         </div>
       </div>

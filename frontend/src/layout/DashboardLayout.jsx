@@ -155,7 +155,7 @@ const DashboardLayout = () => {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden z-10 relative">
         {/* Topbar */}
-        <header className="h-20 flex items-center justify-between px-4 sm:px-8 bg-transparent sticky top-0 z-30 transition-all">
+        <header className="h-20 flex items-center justify-between px-4 sm:px-8 bg-white/80 backdrop-blur-xl border-b border-slate-100/80 sticky top-0 z-30 transition-all">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
