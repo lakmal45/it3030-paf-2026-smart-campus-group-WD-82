@@ -50,12 +50,14 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationFilter authenticationFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationFilter authenticationFilter)
+            throws Exception {
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
-                .addFilterBefore(authenticationFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(authenticationFilter,
+                        org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
 
                 .authorizeHttpRequests(auth -> auth
 
@@ -68,7 +70,8 @@ public class SecurityConfig {
                         // booking endpoints (auth handled manually in BookingController)
                         .requestMatchers("/api/bookings/**").permitAll()
 
-                        // Member 3 – ticket endpoints (PermitAll allows manual session + header check in controller)
+                        // Member 3 – ticket endpoints (PermitAll allows manual session + header check
+                        // in controller)
                         .requestMatchers("/api/tickets/**").permitAll()
 
                         .anyRequest().authenticated())
