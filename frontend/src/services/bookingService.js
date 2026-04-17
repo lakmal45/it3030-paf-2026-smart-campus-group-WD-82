@@ -24,6 +24,30 @@ const bookingService = {
     const response = await api.put(`/bookings/${id}/cancel`);
     return response.data;
   },
+
+  /**
+   * Get all bookings (Admin only).
+   */
+  getAllBookings: async () => {
+    const response = await api.get("/bookings");
+    return response.data;
+  },
+
+  /**
+   * Update a booking by ID (Admin only).
+   */
+  updateBooking: async (id, bookingData) => {
+    const response = await api.put(`/bookings/${id}`, bookingData);
+    return response.data;
+  },
+
+  /**
+   * Delete a booking by ID (Admin only).
+   */
+  deleteBooking: async (id) => {
+    const response = await api.delete(`/bookings/${id}`);
+    return response.data;
+  },
 };
 
 export default bookingService;
