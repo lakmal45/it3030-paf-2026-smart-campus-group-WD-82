@@ -9,10 +9,18 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
-    List<Booking> findByUserIdOrderByCreatedAtDesc(Long userId);
+    @Query("SELECT b FROM Booking b JOIN FETCH b.user WHERE b.user.id = :userId ORDER BY b.createdAt DESC")
+    List<Booking> findByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId);
+
+    @Query("SELECT b FROM Booking b JOIN FETCH b.user ORDER BY b.createdAt DESC")
+    List<Booking> findAllWithUser();
+
+    @Query("SELECT b FROM Booking b JOIN FETCH b.user WHERE b.id = :id")
+    Optional<Booking> findByIdWithUser(@Param("id") Long id);
 
     /**
      * Find bookings that overlap with a given time range on the same resource and date.

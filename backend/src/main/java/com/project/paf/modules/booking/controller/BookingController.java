@@ -47,7 +47,7 @@ public class BookingController {
         String reason = request.get("reason");
 
         if (resource == null || dateStr == null || startTimeStr == null || endTimeStr == null || reason == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All fields are required");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Incomplete booking data provided.");
         }
 
         LocalDate date = LocalDate.parse(dateStr);
@@ -59,7 +59,7 @@ public class BookingController {
     }
 
     /**
-     * GET /api/bookings/my — Get bookings for the current user.
+     * GET /api/bookings/my — Retrieve current user's reservations.
      */
     @GetMapping("/my")
     public ResponseEntity<List<Map<String, Object>>> getMyBookings(
@@ -75,7 +75,54 @@ public class BookingController {
     }
 
     /**
-     * PUT /api/bookings/{id}/cancel — Cancel a booking.
+     * GET /api/bookings — Retrieve global schedule (Admin only).
+     */
+    @GetMapping
+    public ResponseEntity<List<Map<String, Object>>> getAllBookings() {
+        List<Booking> bookings = bookingService.getAllBookings();
+        List<Map<String, Object>> response = bookings.stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * PUT /api/bookings/{id} — Administrative update of reservation details.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> updateBooking(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        
+        String resource = request.get("resource");
+        String dateStr = request.get("date");
+        String startTimeStr = request.get("startTime");
+        String endTimeStr = request.get("endTime");
+        String status = request.get("status");
+
+        if (dateStr == null || startTimeStr == null || endTimeStr == null || resource == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Required fields missing for update.");
+        }
+
+        LocalDate date = LocalDate.parse(dateStr);
+        LocalTime startTime = LocalTime.parse(startTimeStr);
+        LocalTime endTime = LocalTime.parse(endTimeStr);
+
+        Booking updatedBooking = bookingService.updateBooking(id, resource, date, startTime, endTime, status);
+        return ResponseEntity.ok(toResponse(updatedBooking));
+    }
+
+    /**
+     * DELETE /api/bookings/{id} — Permanent removal of a record.
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteBooking(@PathVariable Long id) {
+        bookingService.deleteBooking(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * PUT /api/bookings/{id}/cancel — User-initiated cancellation.
      */
     @PutMapping("/{id}/cancel")
     public ResponseEntity<Map<String, Object>> cancelBooking(
@@ -89,24 +136,24 @@ public class BookingController {
     }
 
     /**
-     * Convert Booking entity to a response map (avoids lazy-load serialization issues).
+     * Map entity to response JSON safely.
      */
     private Map<String, Object> toResponse(Booking booking) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", booking.getId());
         map.put("resource", booking.getResource());
-        map.put("date", booking.getDate().toString());
-        map.put("startTime", booking.getStartTime().toString());
-        map.put("endTime", booking.getEndTime().toString());
+        map.put("date", booking.getDate() != null ? booking.getDate().toString() : null);
+        map.put("startTime", booking.getStartTime() != null ? booking.getStartTime().toString() : null);
+        map.put("endTime", booking.getEndTime() != null ? booking.getEndTime().toString() : null);
         map.put("reason", booking.getReason());
-        map.put("status", booking.getStatus().name());
-        map.put("createdAt", booking.getCreatedAt().toString());
-        map.put("userName", booking.getUser().getName());
+        map.put("status", booking.getStatus() != null ? booking.getStatus().name() : "PENDING");
+        map.put("createdAt", booking.getCreatedAt() != null ? booking.getCreatedAt().toString() : null);
+        map.put("userName", booking.getUser() != null ? booking.getUser().getName() : "Archived User");
         return map;
     }
 
     /**
-     * Resolves the current User from either the session or the X-User-Email header.
+     * Identity Resolution.
      */
     private User resolveUser(HttpSession session, String emailHeader) {
         User resolved = null;
@@ -121,7 +168,7 @@ public class BookingController {
         }
 
         if (resolved == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Security: Session expired or missing.");
         }
         return resolved;
     }
