@@ -29,6 +29,7 @@ import MyBookings from "./pages/user/MyBookings";
 import CreateBooking from "./pages/user/CreateBooking";
 import MyTickets from "./pages/user/MyTickets";
 import CreateTicketForm from "./components/tickets/CreateTicketForm";
+import EditTicketForm from "./components/tickets/EditTicketForm";
 import TicketDetail from "./components/tickets/TicketDetail";
 
 // Admin Pages
@@ -36,6 +37,7 @@ import UserManagement from "./pages/admin/UserManagement";
 import RoleManagement from "./pages/admin/RoleManagement";
 import SystemSettings from "./pages/admin/SystemSettings";
 import AllTickets from "./pages/admin/AllTickets";
+import AllBookings from "./pages/admin/AllBookings";
 
 // Manager Pages
 import Reports from "./pages/manager/Reports";
@@ -135,6 +137,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
                     <CreateTicketForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="tickets/:id/edit"
+                element={
+                  <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <EditTicketForm />
                   </ProtectedRoute>
                 }
               />
@@ -267,6 +277,14 @@ function App() {
                 }
               />
               <Route
+                path="tickets/:id/edit"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <EditTicketForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="resources"
                 element={
                   <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
@@ -295,6 +313,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
                     <ResourceFormPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="bookings"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                    <AllBookings />
                   </ProtectedRoute>
                 }
               />

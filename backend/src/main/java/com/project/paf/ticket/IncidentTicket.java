@@ -1,12 +1,9 @@
 package com.project.paf.ticket;
 
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
 import com.project.paf.modules.user.model.User;
-
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
