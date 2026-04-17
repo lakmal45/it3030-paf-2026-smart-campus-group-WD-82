@@ -164,7 +164,24 @@ function App() {
                 }
               />
               <Route
-                path="resources"
+                path="resources/new"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={[
+                      "USER",
+                      "ROLE_USER",
+                      "ADMIN",
+                      "ROLE_ADMIN",
+                      "MANAGER",
+                      "ROLE_MANAGER",
+                    ]}
+                  >
+                    <ResourceFormPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/:id"
                 element={
                   <ProtectedRoute
                     allowedRoles={[
@@ -177,6 +194,23 @@ function App() {
                     ]}
                   >
                     <ResourceDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/:id/edit"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={[
+                      "USER",
+                      "ROLE_USER",
+                      "ADMIN",
+                      "ROLE_ADMIN",
+                      "MANAGER",
+                      "ROLE_MANAGER",
+                    ]}
+                  >
+                    <ResourceFormPage />
                   </ProtectedRoute>
                 }
               />
@@ -305,6 +339,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
                     <ResourceListPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="resources/new"
+                element={
+                  <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                    <ResourceFormPage />
                   </ProtectedRoute>
                 }
               />

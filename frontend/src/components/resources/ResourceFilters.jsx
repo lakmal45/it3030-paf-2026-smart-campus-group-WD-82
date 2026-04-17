@@ -25,7 +25,8 @@ const ResourceFilters = ({ onSearch }) => {
     onSearch(activeFilters);
   };
 
-  const handleReset = () => {
+  const handleReset = (e) => {
+    if (e) e.preventDefault();
     const reset = { name: "", type: "", location: "", available: "" };
     setFilters(reset);
     onSearch({});
