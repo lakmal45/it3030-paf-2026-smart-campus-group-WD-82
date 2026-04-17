@@ -68,6 +68,16 @@ public class AdminController {
         return ResponseEntity.ok(repo.findAll());
     }
 
+    // ── GET all technicians ───────────────────────────────────────────────────
+    @GetMapping("/technicians")
+    public ResponseEntity<List<User>> getTechnicians(
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
+
+        requireAdmin(session, emailHeader);
+        return ResponseEntity.ok(repo.findByRole(Role.TECHNICIAN));
+    }
+
     // ── UPDATE user role ──────────────────────────────────────────────────────
     @PutMapping("/users/{id}/role")
     public ResponseEntity<User> updateUserRole(

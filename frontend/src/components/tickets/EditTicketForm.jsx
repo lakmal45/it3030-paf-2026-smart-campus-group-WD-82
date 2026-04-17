@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ticketService from "../../services/ticketService";
+import resourceService from "../../services/resourceService";
 import { AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
 
 const CATEGORIES = ["ELECTRICAL", "PLUMBING", "EQUIPMENT", "STRUCTURAL", "OTHER"];
@@ -17,20 +18,22 @@ const EditTicketForm = () => {
     preferredContact: "",
     resourceId: "",
   });
+  const [resources, setResources] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchTicket = async () => {
+    const fetchInitialData = async () => {
       try {
-        const { data } = await ticketService.getById(id);
-        // Only allow editing if OPEN (security is also enforced on backend)
-        if (data.status !== "OPEN" && data.role !== "ADMIN") {
-            // Note: role might not be in ticket data directly as a string, 
-            // but the backend will block it. 
-            // We should ideally check the user role here too.
-        }
+        const [ticketRes, resourceList] = await Promise.all([
+          ticketService.getById(id),
+          resourceService.getAllResources()
+        ]);
+        
+        const data = ticketRes.data;
+        setResources(resourceList);
+        
         setFormData({
           location: data.location || "",
           category: data.category || "OTHER",
@@ -41,17 +44,33 @@ const EditTicketForm = () => {
         });
       } catch (err) {
         console.error(err);
-        setStatus({ type: "error", message: "Failed to load ticket details." });
+        setStatus({ type: "error", message: "Failed to load ticket or resource details." });
       } finally {
         setIsLoading(false);
       }
     };
-    fetchTicket();
+    fetchInitialData();
   }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleResourceChange = (e) => {
+    const resId = e.target.value;
+    if (!resId) {
+      setFormData(prev => ({ ...prev, location: "", resourceId: "" }));
+      return;
+    }
+    const selectedRes = resources.find(r => r.id.toString() === resId);
+    if (selectedRes) {
+      setFormData(prev => ({
+        ...prev,
+        location: `${selectedRes.name} - ${selectedRes.location}`,
+        resourceId: selectedRes.id.toString()
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -105,14 +124,23 @@ const EditTicketForm = () => {
           
           <div className="col-span-1 md:col-span-2">
             <label className="block text-sm font-bold text-slate-700 mb-2">Location / Room <span className="text-rose-500">*</span></label>
-            <input
+            <select
               required
-              type="text"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
+              name="resourceSelect"
+              value={formData.resourceId}
+              onChange={handleResourceChange}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50"
-            />
+            >
+              <option value="">Select a Location/Room</option>
+              {resources.map(res => (
+                <option key={res.id} value={res.id}>
+                  {res.name} ({res.location})
+                </option>
+              ))}
+            </select>
+            {formData.location && (
+              <p className="mt-2 text-xs text-indigo-600 font-medium">Current: {formData.location}</p>
+            )}
           </div>
 
           <div>
@@ -168,16 +196,17 @@ const EditTicketForm = () => {
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50"
                 />
              </div>
-             <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Resource ID</label>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Resource ID <span className="font-normal text-slate-400">(Auto-filled)</span></label>
                 <input
                   type="text"
                   name="resourceId"
                   value={formData.resourceId}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50"
+                  readOnly
+                  placeholder="Select a location above"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
                 />
-             </div>
+              </div>
           </div>
         </div>
 
