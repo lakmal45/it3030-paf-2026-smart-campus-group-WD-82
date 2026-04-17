@@ -65,9 +65,8 @@ public class SecurityConfig {
                         // admin endpoints – session check is handled manually in AdminController
                         .requestMatchers("/api/admin/**").permitAll()
 
-                        // booking endpoints
-                        .requestMatchers("/api/bookings/**")
-                        .hasAnyRole("USER", "ADMIN", "MANAGER")
+                        // booking endpoints (auth handled manually in BookingController)
+                        .requestMatchers("/api/bookings/**").permitAll()
 
                         // Member 3 – ticket endpoints (PermitAll allows manual session + header check in controller)
                         .requestMatchers("/api/tickets/**").permitAll()

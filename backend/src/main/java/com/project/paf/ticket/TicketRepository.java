@@ -1,4 +1,5 @@
 package com.project.paf.ticket;
+import java.util.List;
 
 import com.project.paf.modules.user.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -29,3 +30,4 @@ public interface TicketRepository extends JpaRepository<IncidentTicket, Long> {
     /** Find tickets created by a user with a specific status. */
     List<IncidentTicket> findByCreatedByAndStatus(User user, TicketStatus status);
 }
+
