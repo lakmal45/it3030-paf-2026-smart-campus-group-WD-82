@@ -138,22 +138,26 @@ public class TicketService {
      */
     @Transactional(readOnly = true)
     public List<TicketResponse> getAllTickets(String statusFilter, String categoryFilter, String priorityFilter, User currentUser) {
-        boolean isPrivileged = currentUser.getRole() == Role.ADMIN
-                || currentUser.getRole() == Role.TECHNICIAN
+        boolean isAdminOrManager = currentUser.getRole() == Role.ADMIN
                 || currentUser.getRole() == Role.MANAGER;
+        boolean isTechnician = currentUser.getRole() == Role.TECHNICIAN;
 
         List<IncidentTicket> tickets;
 
         if (statusFilter != null && !statusFilter.isBlank()) {
             TicketStatus status = parseStatus(statusFilter);
-            if (isPrivileged) {
+            if (isAdminOrManager) {
                 tickets = ticketRepository.findByStatus(status);
+            } else if (isTechnician) {
+                tickets = ticketRepository.findByAssignedTechnicianAndStatus(currentUser, status);
             } else {
                 tickets = ticketRepository.findByCreatedByAndStatus(currentUser, status);
             }
         } else {
-            if (isPrivileged) {
+            if (isAdminOrManager) {
                 tickets = ticketRepository.findAll();
+            } else if (isTechnician) {
+                tickets = ticketRepository.findByAssignedTechnician(currentUser);
             } else {
                 tickets = ticketRepository.findByCreatedBy(currentUser);
             }
@@ -242,6 +246,10 @@ public class TicketService {
         User technician = userRepository.findById(Objects.requireNonNull(technicianId))
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Technician not found with id: " + technicianId));
+
+        if (technician.getRole() != Role.TECHNICIAN) {
+            throw new IllegalArgumentException("User with id " + technicianId + " is not a Technician.");
+        }
 
         ticket.setAssignedTechnician(technician);
         // Automatically move ticket to IN_PROGRESS when assigned

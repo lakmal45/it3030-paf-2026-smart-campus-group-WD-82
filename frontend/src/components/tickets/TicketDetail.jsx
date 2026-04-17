@@ -25,6 +25,7 @@ const TicketDetail = () => {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Assign technician state (ADMIN only)
+  const [technicians, setTechnicians] = useState([]);
   const [technicianId, setTechnicianId] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -42,8 +43,19 @@ const TicketDetail = () => {
     }
   };
 
+  const fetchTechnicians = async () => {
+    if (user?.role !== "ADMIN") return;
+    try {
+      const { data } = await ticketService.getTechnicians();
+      setTechnicians(data);
+    } catch (err) {
+      console.error("Failed to load technicians", err);
+    }
+  };
+
   useEffect(() => {
     fetchTicket();
+    fetchTechnicians();
   }, [id]);
 
   const handleUpdateStatus = async (e) => {
@@ -279,17 +291,22 @@ const TicketDetail = () => {
 
              {isAdmin && !['CLOSED', 'REJECTED'].includes(ticket.status) && (
                <form onSubmit={handleAssign} className="mt-6">
-                 <label className="block text-xs font-bold text-slate-600 mb-2">Reassign / Assign to ID:</label>
+                 <label className="block text-xs font-bold text-slate-600 mb-2">Assign to Technician:</label>
                  <div className="flex gap-2">
-                   <input
-                     type="number"
-                     placeholder="Tech ID"
+                   <select
                      value={technicianId}
                      onChange={(e) => setTechnicianId(e.target.value)}
-                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                   />
+                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                   >
+                     <option value="">Select Technician</option>
+                     {technicians.map(tech => (
+                       <option key={tech.id} value={tech.id}>
+                         {tech.name} (ID: {tech.id})
+                       </option>
+                     ))}
+                   </select>
                    <button
-                     disabled={isAssigning || !technicianId.trim()}
+                     disabled={isAssigning || !technicianId}
                      className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm rounded-xl transition-colors disabled:opacity-50 shadow-sm whitespace-nowrap"
                    >
                      Assign

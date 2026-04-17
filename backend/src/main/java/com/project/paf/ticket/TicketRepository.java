@@ -20,6 +20,9 @@ public interface TicketRepository extends JpaRepository<IncidentTicket, Long> {
     /** Find all tickets assigned to a specific technician. */
     List<IncidentTicket> findByAssignedTechnician(User technician);
 
+    /** Find tickets assigned to a specific technician with a specific status. */
+    List<IncidentTicket> findByAssignedTechnicianAndStatus(User technician, TicketStatus status);
+
     /** Find all tickets of a specific category (e.g. ELECTRICAL, PLUMBING). */
     List<IncidentTicket> findByCategory(String category);
 
