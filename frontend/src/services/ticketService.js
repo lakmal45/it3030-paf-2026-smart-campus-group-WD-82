@@ -7,10 +7,13 @@ import api from "./api";
  */
 const ticketService = {
   /**
-   * Fetch all tickets. Pass a status string to filter (e.g. "OPEN").
+   * Fetch all tickets. Pass status, category, or priority to filter.
    */
-  getAll: (status) => {
-    const params = status ? { status } : {};
+  getAll: (status, category, priority) => {
+    const params = {};
+    if (status && status !== "All") params.status = status;
+    if (category && category !== "All") params.category = category;
+    if (priority && priority !== "All") params.priority = priority;
     return api.get("/tickets", { params });
   },
 

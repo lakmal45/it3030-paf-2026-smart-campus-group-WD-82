@@ -1,0 +1,215 @@
+package com.project.paf.ticket;
+
+import com.project.paf.modules.resource.exception.ResourceNotFoundException;
+import com.project.paf.modules.user.model.Role;
+import com.project.paf.modules.user.model.User;
+import com.project.paf.modules.user.repository.UserRepository;
+import com.smartcampus.notification.NotificationService;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+/**
+ * Unit tests for TicketService.
+ */
+@Slf4j
+@ExtendWith(MockitoExtension.class)
+public class TicketServiceTest {
+
+    @Mock
+    private TicketRepository ticketRepository;
+
+    @Mock
+    private TicketCommentRepository commentRepository;
+
+    @Mock
+    private FileStorageService fileStorageService;
+
+    @Mock
+    private NotificationService notificationService;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @InjectMocks
+    private TicketService ticketService;
+
+    private User adminUser;
+    private User regularUser;
+    private User technicianUser;
+    private IncidentTicket openTicket;
+
+    @BeforeEach
+    void setUp() {
+        adminUser = new User();
+        adminUser.setId(1L);
+        adminUser.setEmail("admin@smartcampus.com");
+        adminUser.setRole(Role.ADMIN);
+
+        regularUser = new User();
+        regularUser.setId(2L);
+        regularUser.setEmail("user@smartcampus.com");
+        regularUser.setRole(Role.USER);
+
+        technicianUser = new User();
+        technicianUser.setId(3L);
+        technicianUser.setEmail("tech@smartcampus.com");
+        technicianUser.setRole(Role.TECHNICIAN);
+
+        openTicket = new IncidentTicket();
+        openTicket.setId(10L);
+        openTicket.setCreatedBy(regularUser);
+        openTicket.setStatus(TicketStatus.OPEN);
+        openTicket.setImageUrls(new ArrayList<>());
+    }
+
+    @Test
+    void createTicket_ShouldSetStatusToOpen() {
+        log.info("Running createTicket_ShouldSetStatusToOpen...");
+        CreateTicketRequest request = new CreateTicketRequest();
+        request.setCategory("PLUMBING");
+        request.setDescription("Leaking pipe");
+        request.setPriority("HIGH");
+
+        when(ticketRepository.save(any(IncidentTicket.class))).thenAnswer(invocation -> {
+            IncidentTicket saved = invocation.getArgument(0);
+            saved.setId(100L);
+            return saved;
+        });
+
+        TicketResponse response = ticketService.createTicket(request, regularUser);
+
+        assertNotNull(response);
+        assertEquals(TicketStatus.OPEN, response.getStatus());
+        verify(ticketRepository, times(1)).save(any(IncidentTicket.class));
+    }
+
+    @Test
+    void updateTicketStatus_ValidTransition_ShouldSucceed() {
+        log.info("Running updateTicketStatus_ValidTransition_ShouldSucceed...");
+        UpdateTicketStatusRequest request = new UpdateTicketStatusRequest();
+        request.setStatus(TicketStatus.IN_PROGRESS);
+
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(openTicket));
+        when(ticketRepository.save(any(IncidentTicket.class))).thenReturn(openTicket);
+
+        TicketResponse response = ticketService.updateTicketStatus(10L, request, adminUser);
+
+        assertEquals(TicketStatus.IN_PROGRESS, response.getStatus());
+        verify(ticketRepository, times(1)).save(openTicket);
+        verify(notificationService, times(1)).sendNotification(any(), anyString(), eq("TICKET_UPDATE"));
+    }
+
+    @Test
+    void updateTicketStatus_InvalidTransition_ShouldThrowIllegalStateException() {
+        log.info("Running updateTicketStatus_InvalidTransition_ShouldThrowIllegalStateException...");
+        openTicket.setStatus(TicketStatus.CLOSED);
+
+        UpdateTicketStatusRequest request = new UpdateTicketStatusRequest();
+        request.setStatus(TicketStatus.IN_PROGRESS);
+
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(openTicket));
+
+        assertThrows(IllegalStateException.class, () -> ticketService.updateTicketStatus(10L, request, adminUser));
+        verify(ticketRepository, never()).save(any());
+    }
+
+    @Test
+    void updateTicketStatus_ByUserRole_ShouldThrowAccessDeniedException() {
+        log.info("Running updateTicketStatus_ByUserRole_ShouldThrowAccessDeniedException...");
+        UpdateTicketStatusRequest request = new UpdateTicketStatusRequest();
+        request.setStatus(TicketStatus.IN_PROGRESS);
+
+        assertThrows(AccessDeniedException.class, () -> ticketService.updateTicketStatus(10L, request, regularUser));
+    }
+
+    @Test
+    void assignTechnician_ByNonAdmin_ShouldThrowAccessDeniedException() {
+        log.info("Running assignTechnician_ByNonAdmin_ShouldThrowAccessDeniedException...");
+
+        assertThrows(AccessDeniedException.class, () -> ticketService.assignTechnician(10L, 3L, regularUser));
+    }
+
+    @Test
+    void uploadImages_ExceedingThreeImages_ShouldThrowIllegalStateException() {
+        log.info("Running uploadImages_ExceedingThreeImages_ShouldThrowIllegalStateException...");
+        openTicket.getImageUrls().add("url1");
+        openTicket.getImageUrls().add("url2");
+
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(openTicket));
+
+        List<org.springframework.web.multipart.MultipartFile> files = new ArrayList<>();
+        files.add(mock(org.springframework.web.multipart.MultipartFile.class));
+        files.add(mock(org.springframework.web.multipart.MultipartFile.class));
+
+        assertThrows(IllegalStateException.class, () -> ticketService.uploadImages(10L, files));
+        verify(fileStorageService, never()).store(any());
+    }
+
+    @Test
+    void addComment_ShouldTriggerNotification_WhenCommenterIsNotOwner() {
+        log.info("Running addComment_ShouldTriggerNotification_WhenCommenterIsNotOwner...");
+        CommentRequest request = new CommentRequest();
+        request.setContent("Looking into this");
+
+        when(ticketRepository.findById(10L)).thenReturn(Optional.of(openTicket));
+        
+        TicketComment savedComment = new TicketComment();
+        savedComment.setId(200L);
+        savedComment.setTicket(openTicket);
+        savedComment.setAuthor(adminUser);
+        when(commentRepository.save(any(TicketComment.class))).thenReturn(savedComment);
+
+        ticketService.addComment(10L, request, adminUser);
+
+        verify(notificationService, times(1)).sendNotification(
+                eq(regularUser),
+                contains("New comment added"),
+                eq("COMMENT_ADDED")
+        );
+    }
+
+    @Test
+    void deleteTicket_ByNonAdmin_ShouldThrowAccessDeniedException() {
+        log.info("Running deleteTicket_ByNonAdmin_ShouldThrowAccessDeniedException...");
+
+        assertThrows(AccessDeniedException.class, () -> ticketService.deleteTicket(10L, regularUser));
+    }
+
+    @Test
+    void getTicketById_NotFound_ShouldThrowResourceNotFoundException() {
+        log.info("Running getTicketById_NotFound_ShouldThrowResourceNotFoundException...");
+        when(ticketRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> ticketService.getTicketById(999L));
+    }
+
+    @Test
+    void editComment_ByNonAuthorNonAdmin_ShouldThrowAccessDeniedException() {
+        log.info("Running editComment_ByNonAuthorNonAdmin_ShouldThrowAccessDeniedException...");
+        TicketComment comment = new TicketComment();
+        comment.setId(50L);
+        comment.setAuthor(adminUser); // Author is admin
+
+        CommentRequest request = new CommentRequest();
+        request.setContent("New Content");
+
+        when(commentRepository.findById(50L)).thenReturn(Optional.of(comment));
+
+        // Regular user trying to edit admin's comment
+        assertThrows(AccessDeniedException.class, () -> ticketService.editComment(50L, request, regularUser));
+    }
+}

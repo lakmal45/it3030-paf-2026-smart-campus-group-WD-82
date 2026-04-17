@@ -11,13 +11,15 @@ const TicketList = ({ fetchTickets, title, showCreateButton = false, createPath 
   const [tickets, setTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
   const [error, setError] = useState(null);
 
-  const loadData = async (statusFilter = "") => {
+  const loadData = async (statusFilter = "", catFilter = "", prioFilter = "") => {
     setIsLoading(true);
     setError(null);
     try {
-      const { data } = await fetchTickets(statusFilter);
+      const { data } = await fetchTickets(statusFilter, catFilter, prioFilter);
       setTickets(data);
     } catch (err) {
       console.error(err);
@@ -28,9 +30,9 @@ const TicketList = ({ fetchTickets, title, showCreateButton = false, createPath 
   };
 
   useEffect(() => {
-    loadData(filter);
+    loadData(filter, categoryFilter, priorityFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, categoryFilter, priorityFilter]);
 
   return (
     <div className="py-2">
@@ -53,6 +55,39 @@ const TicketList = ({ fetchTickets, title, showCreateButton = false, createPath 
               <option value="IN_PROGRESS">In Progress</option>
               <option value="RESOLVED">Resolved</option>
               <option value="CLOSED">Closed</option>
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">▼</div>
+          </div>
+
+          <div className="relative flex-1 sm:flex-none">
+            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full sm:w-40 pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 appearance-none shadow-sm cursor-pointer"
+            >
+              <option value="">All Categories</option>
+              <option value="ELECTRICAL">Electrical</option>
+              <option value="PLUMBING">Plumbing</option>
+              <option value="EQUIPMENT">Equipment</option>
+              <option value="STRUCTURAL">Structural</option>
+              <option value="OTHER">Other</option>
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">▼</div>
+          </div>
+
+          <div className="relative flex-1 sm:flex-none">
+            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="w-full sm:w-40 pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 appearance-none shadow-sm cursor-pointer"
+            >
+              <option value="">All Priorities</option>
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+              <option value="CRITICAL">Critical</option>
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">▼</div>
           </div>
@@ -87,9 +122,9 @@ const TicketList = ({ fetchTickets, title, showCreateButton = false, createPath 
            </div>
            <h3 className="text-lg font-bold text-slate-700 mb-1">No Tickets Found</h3>
            <p className="text-slate-500 text-sm max-w-sm">{emptyMessage}</p>
-           {filter && (
-             <button onClick={() => setFilter("")} className="mt-4 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
-               Clear Filter
+           {(filter || categoryFilter || priorityFilter) && (
+             <button onClick={() => { setFilter(""); setCategoryFilter(""); setPriorityFilter(""); }} className="mt-4 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+               Clear Filters
              </button>
            )}
         </div>

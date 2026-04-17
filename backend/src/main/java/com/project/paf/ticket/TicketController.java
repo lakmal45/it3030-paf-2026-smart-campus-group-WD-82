@@ -61,11 +61,13 @@ public class TicketController {
     @GetMapping
     public ResponseEntity<List<TicketResponse>> getAllTickets(
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String priority,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
         User currentUser = resolveUser(session, emailHeader);
-        return ResponseEntity.ok(ticketService.getAllTickets(status, currentUser));
+        return ResponseEntity.ok(ticketService.getAllTickets(status, category, priority, currentUser));
     }
 
     /**
@@ -120,7 +122,6 @@ public class TicketController {
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
         User currentUser = resolveUser(session, emailHeader);
-        requireRoles(currentUser, Role.ADMIN);
         ticketService.deleteTicket(id, currentUser);
         return ResponseEntity.noContent().build();
     }
@@ -237,5 +238,23 @@ public class TicketController {
         if (!hasRole) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized: Role not matching.");
         }
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<java.util.Map<String, String>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.error("Validation error: {}", ex.getMessage());
+        java.util.Map<String, String> body = new java.util.HashMap<>();
+        body.put("error", "Validation Failed");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<java.util.Map<String, String>> handleAllExceptions(Exception ex) {
+        log.error("Internal Server Error: ", ex);
+        java.util.Map<String, String> body = new java.util.HashMap<>();
+        body.put("error", "Internal Server Error");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }

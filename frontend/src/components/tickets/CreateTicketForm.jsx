@@ -31,16 +31,29 @@ const CreateTicketForm = () => {
     setStatus({ type: "", message: "" });
     setIsSubmitting(true);
 
+    let createdTicketId = null;
+
     try {
       // 1. Create ticket
       const { data } = await ticketService.create(formData);
-      
+      createdTicketId = data.id;
+    } catch (err) {
+      console.error(err);
+      setStatus({ 
+        type: "error", 
+        message: err.response?.data?.message || err.response?.data?.error || "Failed to create ticket. Please try again." 
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
       // 2. Upload images if any
       if (files.length > 0) {
-        await ticketService.uploadImages(data.id, files);
+        await ticketService.uploadImages(createdTicketId, files);
       }
 
-      setStatus({ type: "success", message: `Ticket #${data.id} submitted successfully.` });
+      setStatus({ type: "success", message: `Ticket #${createdTicketId} submitted successfully.` });
       
       // Redirect after brief delay
       setTimeout(() => {
@@ -49,9 +62,10 @@ const CreateTicketForm = () => {
 
     } catch (err) {
       console.error(err);
+      const backendError = err.response?.data?.message || err.response?.data?.error || err.message;
       setStatus({ 
         type: "error", 
-        message: err.response?.data?.message || err.response?.data?.error || "Failed to create ticket. Please try again." 
+        message: `Ticket created successfully, but image upload failed: ${backendError}. Please try re-uploading the image.` 
       });
       setIsSubmitting(false);
     }
