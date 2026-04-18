@@ -210,12 +210,12 @@ const Panel = ({ title, action, onAction, children, className = "" }) => (
   </div>
 );
 
-const ActivitySkeleton = () => (
-  <div className="flex gap-4 p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
-    <div className="skeleton-shimmer w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0" />
-    <div className="flex-1 space-y-3 mt-1">
-      <div className="skeleton-shimmer h-3 w-full rounded" />
-      <div className="skeleton-shimmer h-3 w-2/3 rounded" />
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+const Empty = ({ icon: Icon, text }) => (
+  <div className="flex flex-col items-center py-8 text-slate-400">
+    <div className="p-3 bg-slate-50 rounded-xl mb-2">
+      <Icon size={24} className="opacity-50" />
     </div>
     <p className="text-sm text-slate-500">{text}</p>
   </div>
@@ -567,23 +567,29 @@ const AdminDashboard = () => {
           ) : recentActivity.length === 0 ? (
             <Empty icon={Activity} text="No recent activity" />
           ) : (
-            <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
-                 <BarChart layout="vertical" data={technicianWorkload} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
-                    <XAxis type="number" axisLine={false} tickLine={false} hide />
-                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} width={80} />
-                    <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                    <Bar dataKey="count" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={20} />
-                 </BarChart>
-              </ResponsiveContainer>
-              <div className="mt-2 text-[10px] text-slate-400 font-medium text-center italic">Showing active tickets per technician</div>
+            <div className="space-y-4">
+              {recentActivity.map((n, i) => (
+                <div
+                  key={n.id}
+                  className={`flex gap-3 animate-card-enter stagger-${Math.min(i + 1, 6)}`}
+                >
+                  <div
+                    className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${dotColors[i % dotColors.length]}`}
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-slate-800 leading-snug">
+                      {n.message}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {fmtAgo(n.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-        </div>
+        </Panel>
       </div>
-
-
 
       {/* ── Users + Bookings + Resources ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -737,42 +743,8 @@ const AdminDashboard = () => {
               );
             })}
           </div>
-          <button
-            onClick={() => navigate('/admin/users')}
-            className="mt-6 w-full py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
-          >
-            Manage All Users →
-          </button>
-        </div>
-      </div>
-
-      {/* ── Recent Activity (below role/users) ──────────────────────── */}
-      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 animate-card-enter stagger-6 mt-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-slate-800">Recent Activity</h2>
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{recentActivity.length} Events</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {refreshing ? (
-            <> <ActivitySkeleton /> <ActivitySkeleton /> <ActivitySkeleton /> <ActivitySkeleton /> <ActivitySkeleton /> </>
-          ) : recentActivity.length === 0 ? (
-            <p className="text-sm text-slate-400 py-8 text-center col-span-full">No recent activity</p>
-          ) : (
-            recentActivity.map((notif, idx) => (
-              <div key={notif.id} className={`flex items-start gap-4 p-4 rounded-2xl border border-slate-100 hover:border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-all animate-card-enter stagger-${Math.min(idx + 1, 6)}`}>
-                <div className={`flex-shrink-0 w-2.5 h-2.5 mt-1.5 rounded-full ${dotColors[idx % dotColors.length]} shadow-sm`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 leading-snug break-words">{notif.message}</p>
-                  <p className="text-xs font-medium text-slate-400 mt-2 flex items-center gap-1.5">
-                    <Clock size={12} className="opacity-70" />
-                    {timeAgo(notif.createdAt)}
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        )}
+      </Panel>
     </div>
   );
 };
