@@ -143,7 +143,7 @@ const UserDashboard = () => {
         api.get('/notifications'),
         api.get('/notifications/unread-count'),
       ]);
-      setTickets(ticketsRes.data);
+      setTickets(ticketsRes.data?.content ?? ticketsRes.data);
       setNotifications(notifsRes.data);
       setUnreadCount(countRes.data);
       setError(null);

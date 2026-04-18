@@ -162,7 +162,7 @@ const AdminDashboard = () => {
         api.get('/notifications'),
       ]);
       setUsers(usersRes.data);
-      setTickets(ticketsRes.data);
+      setTickets(ticketsRes.data?.content ?? ticketsRes.data);
       setNotifications(notifsRes.data);
       setError(null);
     } catch (err) {
@@ -302,7 +302,7 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {!refreshing && tickets.length > 0 && (
+          {!refreshing && tickets?.length > 0 && (
             <div className="flex flex-wrap gap-4 mt-4">
               {chartData.map(d => (
                 <div key={d.name} className="flex items-center gap-2">
