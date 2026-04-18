@@ -85,8 +85,6 @@ const CommentSection = ({ ticketId, currentUser }) => {
     }
   };
 
-  if (isLoading) return <div className="text-sm text-slate-500 animate-pulse mt-6">Loading comments...</div>;
-
   return (
     <div className="mt-8 border-t border-slate-100 pt-8">
       <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
@@ -118,9 +116,17 @@ const CommentSection = ({ ticketId, currentUser }) => {
         </div>
       </form>
 
-      {/* Comment List */}
       <div className="space-y-6">
-        {comments.map((c) => {
+        {isLoading ? (
+          <div className="space-y-4 animate-pulse">
+            {[1, 2].map(i => (
+              <div key={i} className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-slate-200 shrink-0"></div>
+                <div className="flex-1 bg-slate-100 h-24 rounded-2xl rounded-tl-none"></div>
+              </div>
+            ))}
+          </div>
+        ) : comments.map((c) => {
           const isOwner = c.authorId === currentUser?.id;
           const canModify = isOwner || isAdmin;
 
@@ -176,7 +182,7 @@ const CommentSection = ({ ticketId, currentUser }) => {
             </div>
           );
         })}
-        {comments.length === 0 && (
+        {!isLoading && comments.length === 0 && (
           <div className="text-center py-10 text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
             No comments yet. Start the conversation.
           </div>

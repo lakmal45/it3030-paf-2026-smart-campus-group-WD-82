@@ -3,6 +3,7 @@ package com.project.paf.modules.booking.service;
 import com.project.paf.modules.booking.entity.Booking;
 import com.project.paf.modules.booking.entity.BookingStatus;
 import com.project.paf.modules.booking.repository.BookingRepository;
+import com.project.paf.modules.notification.service.AppNotificationService;
 import com.project.paf.modules.user.model.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,14 +19,18 @@ import java.util.List;
 public class BookingService {
 
     private final BookingRepository bookingRepository;
+    private final AppNotificationService appNotificationService;
 
-    public BookingService(BookingRepository bookingRepository) {
+    public BookingService(BookingRepository bookingRepository,
+                          AppNotificationService appNotificationService) {
         this.bookingRepository = bookingRepository;
+        this.appNotificationService = appNotificationService;
     }
 
     /**
      * Create a new booking for the given user.
      * Checks for time-slot conflicts before saving.
+     * Sends an in-app notification to the user confirming receipt.
      */
     public Booking createBooking(String resource, LocalDate date, LocalTime startTime,
                                   LocalTime endTime, String reason, User user) {
@@ -49,7 +54,17 @@ public class BookingService {
         booking.setReason(reason);
         booking.setStatus(BookingStatus.PENDING);
         booking.setUser(user);
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        // Notify the user their booking request was received
+        appNotificationService.createNotification(
+            user,
+            "Booking Request Submitted",
+            "Your booking for \"" + resource + "\" on " + date + " is pending approval.",
+            "info"
+        );
+
+        return saved;
     }
 
     /**
@@ -114,18 +129,33 @@ public class BookingService {
     }
 
     /**
-     * Confirm a booking (Admin/Manager control).
+     * Confirm (approve) a booking (Admin/Manager control).
+     * Notifies the booking owner that their request was approved.
      */
     public Booking confirmBooking(Long id) {
         Booking booking = bookingRepository.findByIdWithUser(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
 
         booking.setStatus(BookingStatus.CONFIRMED);
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        // Notify the booking owner of approval
+        if (booking.getUser() != null) {
+            appNotificationService.createNotification(
+                booking.getUser(),
+                "Booking Approved ✅",
+                "Your booking for \"" + booking.getResource() + "\" on " + booking.getDate()
+                    + " (" + booking.getStartTime() + "–" + booking.getEndTime() + ") has been approved.",
+                "success"
+            );
+        }
+
+        return saved;
     }
 
     /**
      * Cancel a booking by the owning user.
+     * Notifies the user that their booking was cancelled.
      */
     public Booking cancelBooking(Long bookingId, User user) {
         Booking booking = bookingRepository.findByIdWithUser(bookingId)
@@ -136,6 +166,41 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        // Notify the user their booking was cancelled
+        appNotificationService.createNotification(
+            user,
+            "Booking Cancelled",
+            "Your booking for \"" + booking.getResource() + "\" on " + booking.getDate() + " has been cancelled.",
+            "warning"
+        );
+
+        return saved;
+    }
+
+    /**
+     * Reject a booking (Admin/Manager control).
+     * Notifies the booking owner their request was rejected.
+     */
+    public Booking rejectBooking(Long id) {
+        Booking booking = bookingRepository.findByIdWithUser(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        Booking saved = bookingRepository.save(booking);
+
+        // Notify the booking owner of rejection
+        if (booking.getUser() != null) {
+            appNotificationService.createNotification(
+                booking.getUser(),
+                "Booking Rejected ❌",
+                "Your booking request for \"" + booking.getResource() + "\" on " + booking.getDate()
+                    + " has been rejected by an administrator.",
+                "alert"
+            );
+        }
+
+        return saved;
     }
 }
