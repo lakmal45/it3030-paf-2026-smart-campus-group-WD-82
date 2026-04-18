@@ -13,7 +13,8 @@ import {
   Filter,
   BarChart3,
   TrendingUp,
-  Activity
+  Activity,
+  Download
 } from "lucide-react";
 import {
   BarChart,
@@ -140,6 +141,38 @@ const BookingAnalytics = () => {
     { name: 'Cancelled', value: bookings.filter(b => b.status === "CANCELLED").length, color: '#ef4444' }
   ];
 
+  const generateReport = () => {
+    if (bookings.length === 0) {
+      alert("No data available to export.");
+      return;
+    }
+
+    const headers = ["ID", "Resource", "User", "Date", "Start Time", "End Time", "Status", "Reason"];
+    const csvContent = [
+      headers.join(","),
+      ...bookings.map(b => [
+        b.id,
+        `"${b.resource || ''}"`,
+        `"${b.userName || ''}"`,
+        b.date,
+        b.startTime,
+        b.endTime,
+        b.status,
+        `"${(b.reason || '').replace(/"/g, '""')}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `booking_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center h-[60vh] gap-6">
@@ -160,10 +193,16 @@ const BookingAnalytics = () => {
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Booking <span className="text-indigo-600">Analytics</span></h1>
           <p className="text-slate-500 font-medium">System-wide resource trends and management dashboard.</p>
         </div>
-        <button onClick={fetchBookings} className="px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm">
-          <Filter size={18} />
-          Refresh Data
-        </button>
+        <div className="flex gap-3">
+          <button onClick={generateReport} className="px-5 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200">
+            <Download size={18} />
+            Download Report
+          </button>
+          <button onClick={fetchBookings} className="px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm">
+            <Filter size={18} />
+            Refresh Data
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
