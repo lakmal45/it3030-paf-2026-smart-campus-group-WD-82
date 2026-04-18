@@ -6,6 +6,7 @@ import com.project.paf.modules.notification.repository.NotificationRepository;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -76,7 +77,7 @@ public class AppNotificationService {
      * Marks a single notification as read.
      * Verifies that the notification belongs to the calling user.
      */
-    public void markAsRead(Long notificationId, User user) {
+    public void markAsRead(@NonNull Long notificationId, User user) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
                 
@@ -98,7 +99,7 @@ public class AppNotificationService {
                 n.setRead(true);
             }
         }
-        notificationRepository.saveAll(notifications);
+        notificationRepository.saveAll(java.util.Objects.requireNonNull(notifications));
     }
 
     private NotificationResponse mapToResponse(Notification notification) {

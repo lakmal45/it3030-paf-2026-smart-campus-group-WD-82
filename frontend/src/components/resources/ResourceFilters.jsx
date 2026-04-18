@@ -31,82 +31,97 @@ const ResourceFilters = ({ onSearch }) => {
     setFilters(reset);
     onSearch({});
   };
-
   return (
-    <form onSubmit={handleSearch} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-3">
-          <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Asset Name</label>
+    <form onSubmit={handleSearch} className="w-full">
+      <div className="flex flex-wrap items-end gap-4 lg:gap-5">
+        
+        {/* Asset Name */}
+        <div className="flex-1 min-w-[240px]">
+          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2 px-1">Asset Name</label>
           <input
             type="text"
             name="name"
             value={filters.name}
             onChange={handleChange}
             placeholder="e.g. Room 101.."
-            className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:outline-none font-medium text-slate-900 placeholder-slate-400"
+            className="w-full px-5 py-3 border border-slate-200 bg-slate-50/30 rounded-2xl transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:bg-white focus:outline-none font-semibold text-slate-700 placeholder-slate-400 shadow-sm"
           />
         </div>
 
-        <div className="lg:col-span-2">
-          <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Category</label>
-          <select
-            name="type"
-            value={filters.type}
-            onChange={handleChange}
-            className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:outline-none font-bold text-slate-900 bg-no-repeat bg-[right_1.25rem_center] appearance-none"
-            style={{ backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E')" }}
-          >
-            <option value="">All Types</option>
-            <option value="Room">Lecture Room</option>
-            <option value="Lab">Scientific Lab</option>
-            <option value="Equipment">Tangible Equipment</option>
-            <option value="Lecture Hall">Theatre / Hall</option>
-            <option value="Auditorium">Auditorium</option>
-          </select>
+        {/* Category */}
+        <div className="w-full sm:w-[200px] lg:flex-1 lg:min-w-[180px]">
+          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2 px-1">Category</label>
+          <div className="relative">
+            <select
+              name="type"
+              value={filters.type}
+              onChange={handleChange}
+              className="w-full pl-5 pr-12 py-3 border border-slate-200 bg-slate-50/30 rounded-2xl transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:bg-white focus:outline-none font-semibold text-slate-700 appearance-none cursor-pointer shadow-sm"
+            >
+              <option value="">All Types</option>
+              <option value="Room">Lecture Room</option>
+              <option value="Lab">Scientific Lab</option>
+              <option value="Equipment">Tangible Equipment</option>
+              <option value="Lecture Hall">Theatre / Hall</option>
+              <option value="Auditorium">Auditorium</option>
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+              <RotateCcw className="h-4 w-4 rotate-90" />
+            </div>
+          </div>
         </div>
 
-        <div className="lg:col-span-3">
-          <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Location</label>
+        {/* Location */}
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2 px-1">Location</label>
           <input
             type="text"
             name="location"
             value={filters.location}
             onChange={handleChange}
             placeholder="e.g. Block A.."
-            className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:outline-none font-medium text-slate-900 placeholder-slate-400"
+            className="w-full px-5 py-3 border border-slate-200 bg-slate-50/30 rounded-2xl transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:bg-white focus:outline-none font-semibold text-slate-700 placeholder-slate-400 shadow-sm"
           />
         </div>
 
-        <div className="lg:col-span-2">
-          <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Availability</label>
-          <select
-            name="available"
-            value={filters.available}
-            onChange={handleChange}
-            className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:outline-none font-bold text-slate-900 bg-no-repeat bg-[right_1.25rem_center] appearance-none"
-            style={{ backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E')" }}
-          >
-            <option value="">Any</option>
-            <option value="true">Available</option>
-            <option value="false">Reserved</option>
-          </select>
+        {/* Availability */}
+        <div className="w-full sm:w-[180px] lg:flex-1 lg:min-w-[160px]">
+          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2 px-1">Availability</label>
+          <div className="relative">
+            <select
+              name="available"
+              value={filters.available}
+              onChange={handleChange}
+              className="w-full pl-5 pr-12 py-3 border border-slate-200 bg-slate-50/30 rounded-2xl transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:bg-white focus:outline-none font-semibold text-slate-700 appearance-none cursor-pointer shadow-sm"
+            >
+              <option value="">Any State</option>
+              <option value="true">Available</option>
+              <option value="false">Reserved</option>
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+              <Search className="h-4 w-4" />
+            </div>
+          </div>
         </div>
 
-        <div className="lg:col-span-2 flex flex-col sm:flex-row gap-2 sm:items-end">
+        {/* Action Buttons */}
+        <div className="flex flex-1 sm:flex-none items-center gap-2 min-w-[200px] sm:min-w-0">
           <button
             type="submit"
-            className="flex-1 px-4 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl transition-all shadow-lg shadow-blue-100 font-black flex items-center justify-center space-x-2 active:scale-95 whitespace-nowrap"
+            className="flex-1 sm:px-8 h-[46px] bg-blue-600 hover:bg-blue-700 text-white rounded-2xl transition-all shadow-md shadow-blue-200 font-bold flex items-center justify-center space-x-2 active:scale-95 group sm:min-w-[120px]"
           >
-            <Search className="h-4 w-4 shrink-0" />
-            <span className="hidden xl:inline">Search</span>
+            <Search className="h-4 w-4 shrink-0 group-hover:scale-110 transition-transform" />
+            <span className="text-xs uppercase tracking-widest">Search</span>
           </button>
+          
           <button
             type="button"
             onClick={handleReset}
-            className="flex-1 px-4 py-3.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-2xl transition-all font-black flex items-center justify-center space-x-2 active:scale-95 whitespace-nowrap"
+            className="w-12 h-[46px] lg:w-auto lg:px-6 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-100 border border-slate-200 rounded-2xl transition-all font-bold flex items-center justify-center space-x-2 active:scale-95 shadow-sm"
+            title="Reset Filters"
           >
             <RotateCcw className="h-4 w-4 shrink-0" />
-            <span className="hidden xl:inline">Reset</span>
+            <span className="text-xs uppercase tracking-widest hidden lg:inline">Reset</span>
           </button>
         </div>
       </div>

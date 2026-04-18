@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -81,14 +82,14 @@ public class AdminController {
     // ── UPDATE user role ──────────────────────────────────────────────────────
     @PutMapping("/users/{id}/role")
     public ResponseEntity<User> updateUserRole(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @RequestParam Role role,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
         requireAdmin(session, emailHeader);
 
-        User user = repo.findById(id)
+        User user = repo.findById(java.util.Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         user.setRole(role);
@@ -98,12 +99,12 @@ public class AdminController {
     // ── DELETE user ───────────────────────────────────────────────────────────
     @DeleteMapping("/users/{id}")
     public ResponseEntity<Void> deleteUser(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
         requireAdmin(session, emailHeader);
-        repo.deleteById(id);
+        repo.deleteById(java.util.Objects.requireNonNull(id));
         return ResponseEntity.noContent().build();
     }
 

@@ -1,5 +1,6 @@
 package com.project.paf.ticket;
 import java.util.List;
+import org.springframework.lang.NonNull;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -90,7 +91,7 @@ public class TicketController {
      * GET /api/tickets/{id} — Get a single ticket by ID.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<TicketResponse> getTicketById(@PathVariable Long id) {
+    public ResponseEntity<TicketResponse> getTicketById(@PathVariable @NonNull Long id) {
         return ResponseEntity.ok(ticketService.getTicketById(id));
     }
 
@@ -100,7 +101,7 @@ public class TicketController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<TicketResponse> updateTicket(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @Valid @RequestBody UpdateTicketRequest request,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
@@ -115,7 +116,7 @@ public class TicketController {
      */
     @PutMapping("/{id}/status")
     public ResponseEntity<TicketResponse> updateTicketStatus(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @Valid @RequestBody UpdateTicketStatusRequest request,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
@@ -131,7 +132,7 @@ public class TicketController {
      */
     @PutMapping("/{id}/assign")
     public ResponseEntity<TicketResponse> assignTechnician(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @Valid @RequestBody AssignTechnicianRequest request,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
@@ -139,7 +140,7 @@ public class TicketController {
         User currentUser = resolveUser(session, emailHeader);
         requireRoles(currentUser, Role.ADMIN);
         return ResponseEntity.ok(
-                ticketService.assignTechnician(id, request.getTechnicianId(), currentUser));
+                ticketService.assignTechnician(id, java.util.Objects.requireNonNull(request.getTechnicianId()), currentUser));
     }
 
     /**
@@ -149,7 +150,7 @@ public class TicketController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ResponseEntity<Void> deleteTicket(
-            @PathVariable Long id, 
+            @PathVariable @NonNull Long id, 
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
         User currentUser = resolveUser(session, emailHeader);
@@ -163,7 +164,7 @@ public class TicketController {
      */
     @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<TicketResponse> uploadImages(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @RequestParam("files") List<MultipartFile> files) {
 
         return ResponseEntity.ok(ticketService.uploadImages(id, files));
@@ -178,7 +179,7 @@ public class TicketController {
      */
     @GetMapping("/{id}/comments")
     public ResponseEntity<org.springframework.data.domain.Page<CommentResponse>> getComments(
-            @PathVariable Long id,
+            @PathVariable @org.springframework.lang.NonNull Long id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(ticketService.getComments(id, page, size));
@@ -190,7 +191,7 @@ public class TicketController {
      */
     @PostMapping("/{id}/comments")
     public ResponseEntity<CommentResponse> addComment(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @Valid @RequestBody CommentRequest request,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
@@ -206,8 +207,8 @@ public class TicketController {
      */
     @PutMapping("/{ticketId}/comments/{commentId}")
     public ResponseEntity<CommentResponse> editComment(
-            @PathVariable Long ticketId,
-            @PathVariable Long commentId,
+            @PathVariable @NonNull Long ticketId,
+            @PathVariable @NonNull Long commentId,
             @Valid @RequestBody CommentRequest request,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
@@ -223,8 +224,8 @@ public class TicketController {
     @DeleteMapping("/{ticketId}/comments/{commentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ResponseEntity<Void> deleteComment(
-            @PathVariable Long ticketId,
-            @PathVariable Long commentId,
+            @PathVariable @NonNull Long ticketId,
+            @PathVariable @NonNull Long commentId,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 

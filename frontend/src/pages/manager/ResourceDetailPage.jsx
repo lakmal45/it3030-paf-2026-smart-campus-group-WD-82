@@ -33,12 +33,11 @@ const ResourceDetailPage = () => {
   const [isToggling, setIsToggling] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const isAdmin = user?.role === "ADMIN" || user?.role === "ROLE_ADMIN";
-  const isManager = user?.role === "MANAGER" || user?.role === "ROLE_MANAGER";
-  const isUser = user?.role === "USER" || user?.role === "ROLE_USER"; 
+  const normalizedRole = user?.role?.toUpperCase() || "";
+  const isAdmin = normalizedRole.includes("ADMIN");
   
-  // Broadening permissions to unblock Member 1's development
-  const canModify = isAdmin || isManager || isUser;
+  // Strict RBAC: Only ADMIN can modify resources (Add/Edit/Delete/Status)
+  const canModify = isAdmin;
 
   useEffect(() => {
     const fetchResource = async () => {
@@ -62,7 +61,7 @@ const ResourceDetailPage = () => {
     try {
       await resourceService.delete(id);
       showToast("Resource deleted permanently", "success");
-      const basePath = isAdmin ? "/dashboard/admin" : "/dashboard/manager";
+      const basePath = "/dashboard/admin";
       navigate(`${basePath}/resources`);
     } catch (error) {
       console.error("Error deleting resource:", error);
@@ -165,7 +164,7 @@ const ResourceDetailPage = () => {
             {canModify && (
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 bg-white/5 backdrop-blur-xl p-2 rounded-lg sm:rounded-2xl border border-white/10 shadow-lg sm:shadow-2xl self-start sm:self-auto">
                 <Link 
-                  to={`${isAdmin ? '/dashboard/admin' : '/dashboard/manager'}/resources/${id}/edit`} 
+                  to={`/dashboard/admin/resources/${id}/edit`} 
                   className="bg-white text-slate-900 hover:bg-slate-50 px-3 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center justify-center transition-all font-bold text-sm sm:text-base shadow-sm active:scale-95"
                 >
                   <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" /> Modify
