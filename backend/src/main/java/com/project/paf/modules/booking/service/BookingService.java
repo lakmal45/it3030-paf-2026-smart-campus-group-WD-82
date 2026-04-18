@@ -114,6 +114,17 @@ public class BookingService {
     }
 
     /**
+     * Confirm a booking (Admin/Manager control).
+     */
+    public Booking confirmBooking(Long id) {
+        Booking booking = bookingRepository.findByIdWithUser(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        return bookingRepository.save(booking);
+    }
+
+    /**
      * Cancel a booking by the owning user.
      */
     public Booking cancelBooking(Long bookingId, User user) {

@@ -136,6 +136,15 @@ public class BookingController {
     }
 
     /**
+     * PUT /api/bookings/{id}/confirm — Admin-initiated confirmation.
+     */
+    @PutMapping("/{id}/confirm")
+    public ResponseEntity<Map<String, Object>> confirmBooking(@PathVariable Long id) {
+        Booking booking = bookingService.confirmBooking(id);
+        return ResponseEntity.ok(toResponse(booking));
+    }
+
+    /**
      * Map entity to response JSON safely.
      */
     private Map<String, Object> toResponse(Booking booking) {

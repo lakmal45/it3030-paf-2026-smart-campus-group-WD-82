@@ -57,6 +57,24 @@ public class UserController {
         }
     }
 
+    @PutMapping("/me/notifications")
+    public ResponseEntity<?> updateNotificationPrefs(@RequestBody Map<String, Object> request, HttpSession session) {
+        User currentUser = (User) session.getAttribute("user");
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body("Not logged in");
+        }
+        // Pass null for any key not in the request — the service will keep the existing DB value
+        Boolean emailEnabled = request.containsKey("emailNotificationsEnabled")
+                ? Boolean.TRUE.equals(request.get("emailNotificationsEnabled"))
+                : null;
+        Boolean pushEnabled = request.containsKey("pushNotificationsEnabled")
+                ? Boolean.TRUE.equals(request.get("pushNotificationsEnabled"))
+                : null;
+        User updatedUser = userService.updateNotificationPrefs(currentUser.getId(), emailEnabled, pushEnabled);
+        session.setAttribute("user", updatedUser);
+        return ResponseEntity.ok(updatedUser);
+    }
+
     @DeleteMapping("/me")
     public ResponseEntity<?> deleteMe(HttpSession session) {
         User currentUser = (User) session.getAttribute("user");

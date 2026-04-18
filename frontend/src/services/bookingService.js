@@ -48,6 +48,14 @@ const bookingService = {
     const response = await api.put(`/bookings/${id}/cancel`);
     return response.data;
   },
+
+  /**
+   * Confirm a booking by ID (Admin use).
+   */
+  confirmBooking: async (id) => {
+    const response = await api.put(`/bookings/${id}/confirm`);
+    return response.data;
+  },
 };
 
 export default bookingService;

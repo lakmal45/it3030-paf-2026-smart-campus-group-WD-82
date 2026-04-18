@@ -40,3 +40,12 @@ export const deleteAccount = async () => {
         throw error.response?.data || "Failed to delete account";
     }
 };
+
+export const updateNotificationPrefs = async (prefs) => {
+    try {
+        const response = await axios.put(`${API_URL}/me/notifications`, prefs);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || "Failed to update notification preferences";
+    }
+};

@@ -4,7 +4,8 @@ import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
-import com.smartcampus.notification.NotificationService;
+import com.project.paf.modules.notification.service.AppNotificationService;
+import com.project.paf.modules.notification.service.EmailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -38,18 +39,21 @@ public class TicketService {
     private final TicketCommentRepository commentRepository;
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
+    private final EmailService emailService;
+    private final AppNotificationService appNotificationService;
 
     public TicketService(TicketRepository ticketRepository,
                          TicketCommentRepository commentRepository,
                          FileStorageService fileStorageService,
                          UserRepository userRepository,
-                         NotificationService notificationService) {
+                         EmailService emailService,
+                         AppNotificationService appNotificationService) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
-        this.notificationService = notificationService;
+        this.emailService = emailService;
+        this.appNotificationService = appNotificationService;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -76,6 +80,14 @@ public class TicketService {
 
         IncidentTicket saved = ticketRepository.save(ticket);
         log.info("Ticket #{} created by user '{}'", saved.getId(), currentUser.getEmail());
+
+        // Notify the user who created the ticket
+        emailService.notifyTicketCreated(saved);
+
+        // Notify all admins and managers
+        List<User> adminsAndManagers = userRepository.findByRoleIn(List.of(Role.ADMIN, Role.MANAGER));
+        emailService.notifyAdminsAndManagersNewTicket(saved, adminsAndManagers);
+
         return mapToResponse(saved);
     }
 
@@ -194,11 +206,8 @@ public class TicketService {
         log.info("Ticket #{} status changed: {} → {} by '{}'",
                 id, current, next, currentUser.getEmail());
 
-        notificationService.sendNotification(
-            ticket.getCreatedBy(),
-            "Your ticket #" + ticket.getId() + " status changed to " + next,
-            "TICKET_UPDATE"
-        );
+        // Notify the ticket creator about the status change
+        emailService.notifyStatusChange(updated, current);
 
         return mapToResponse(updated);
     }
@@ -238,10 +247,11 @@ public class TicketService {
         log.info("Ticket #{} assigned to technician '{}' by admin '{}'",
                 ticketId, technician.getEmail(), currentUser.getEmail());
 
-        notificationService.sendNotification(
+        appNotificationService.createNotification(
             technician,
+            "Ticket Assigned",
             "You have been assigned to ticket #" + ticket.getId(),
-            "TICKET_UPDATE"
+            "info"
         );
 
         return mapToResponse(updated);
@@ -321,12 +331,13 @@ public class TicketService {
         log.info("Comment #{} added to ticket #{} by '{}'",
                 saved.getId(), ticketId, currentUser.getEmail());
 
-        if (!currentUser.getId().equals(ticket.getCreatedBy().getId())) {
-            notificationService.sendNotification(
-                ticket.getCreatedBy(),
-                "New comment added on your ticket #" + ticket.getId(),
-                "COMMENT_ADDED"
-            );
+        // Notify the ticket creator when an admin, manager, or technician adds a comment
+        boolean isAdminOrManager = currentUser.getRole() == Role.ADMIN
+                || currentUser.getRole() == Role.MANAGER
+                || currentUser.getRole() == Role.TECHNICIAN;
+        if (isAdminOrManager && ticket.getCreatedBy() != null
+                && !ticket.getCreatedBy().getId().equals(currentUser.getId())) {
+            emailService.notifyCommentAdded(ticket, saved, currentUser);
         }
 
         return mapToCommentResponse(saved);
