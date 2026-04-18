@@ -127,6 +127,8 @@ public class TicketController {
     }
 
     /**
+     * PUT /api/tickets/{id}/assign — Assign a ticket to a technician.
+     */
     @PutMapping("/{id}/assign")
     public ResponseEntity<TicketResponse> assignTechnician(
             @PathVariable @NonNull Long id,

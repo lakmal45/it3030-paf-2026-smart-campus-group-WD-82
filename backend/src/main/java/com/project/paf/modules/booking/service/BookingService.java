@@ -180,4 +180,21 @@ public class BookingService {
 
         return saved;
     }
+
+    /**
+     * Reject a booking (Admin/Manager control).
+     * Sends email + in-app notification to the booking owner.
+     */
+    public Booking rejectBooking(Long id) {
+        Booking booking = bookingRepository.findByIdWithUser(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        Booking saved = bookingRepository.save(booking);
+
+        // Notify the booking owner of rejection (async: email + in-app)
+        emailService.notifyBookingCancelled(saved, "an administrator");
+
+        return saved;
+    }
 }
