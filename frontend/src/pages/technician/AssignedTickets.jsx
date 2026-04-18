@@ -11,11 +11,11 @@ const AssignedTickets = () => {
   return (
     <div className="p-2 sm:p-6">
       <TicketList
-        // The backend returns all tickets for TECHNICIAN role too
+        // Now filtered by the backend to only show tickets assigned to this technician
         fetchTickets={ticketService.getAll} 
-        title="All Service Tickets"
+        title="My Assigned Tickets"
         showCreateButton={false}
-        emptyMessage="No tickets available."
+        emptyMessage="No tickets assigned to you."
       />
     </div>
   );

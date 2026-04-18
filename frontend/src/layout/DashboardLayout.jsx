@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { useState, useRef, useEffect } from "react";
 import { Menu, X, LogOut, User, Settings, ChevronDown, Bell, LayoutDashboard, Search, HelpCircle, CheckCircle2, AlertCircle, Info, AlertTriangle, CheckCheck } from "lucide-react";
 import { roleNavigation } from "../routes/navigation";
+import { useNotifications } from "../context/NotificationContext";
 
 const DashboardLayout = () => {
   const { user, logout } = useAuth();
@@ -11,24 +12,7 @@ const DashboardLayout = () => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const profileDropdownRef = useRef(null);
   const notificationsDropdownRef = useRef(null);
-  
-  // Mock notifications
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: "New Assignment", message: "Mathematics Assignment 3 is now available.", time: "2m ago", type: "info", isRead: false },
-    { id: 2, title: "Booking Confirmed", message: "Study Room 102 booking is confirmed for 2 PM.", time: "1h ago", type: "success", isRead: false },
-    { id: 3, title: "Reminder", message: "Your Library book 'Introduction to AI' is due in 2 days.", time: "5h ago", type: "warning", isRead: false },
-    { id: 4, title: "System Update", message: "Smart Campus Portal will be down for maintenance tonight at 12 AM.", time: "1d ago", type: "alert", isRead: true },
-  ]);
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-  };
-
-  const markAsRead = (id) => {
-    setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
-  };
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const location = useLocation();
 
   const userRole = user?.role?.toUpperCase() || "USER";
@@ -192,11 +176,19 @@ const DashboardLayout = () => {
                 <div className="relative" ref={notificationsDropdownRef}>
                   <button 
                     onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                    className={`p-2.5 hover:text-indigo-600 bg-white/80 backdrop-blur-sm hover:bg-white border border-slate-200/80 rounded-full shadow-sm hover:shadow transition-all relative group ${isNotificationsOpen ? "text-indigo-600 ring-2 ring-indigo-500/20 border-indigo-400" : "text-slate-500"}`}
+                    className={`p-2.5 hover:text-indigo-600 bg-white/80 backdrop-blur-sm hover:bg-white border ${
+                      unreadCount > 0 
+                        ? "border-rose-200/80 ring-2 ring-rose-500/10 text-slate-700 bg-rose-50/30" 
+                        : "border-slate-200/80 text-slate-500"
+                    } rounded-full shadow-sm hover:shadow transition-all relative group ${
+                      isNotificationsOpen ? "text-indigo-600 ring-2 ring-indigo-500/20 border-indigo-400" : ""
+                    }`}
                   >
-                      <Bell size={18} className={`${unreadCount > 0 ? "animate-swing" : ""}`} />
+                      <Bell size={18} className={`${unreadCount > 0 ? "text-indigo-600 animate-swing" : ""}`} />
                       {unreadCount > 0 && (
-                        <span className="absolute top-2 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white animate-pulse"></span>
+                        <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow border-2 border-white animate-bounce" style={{ animationDuration: '2s' }}>
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
                       )}
                   </button>
 
@@ -225,7 +217,7 @@ const DashboardLayout = () => {
                     <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
                       {notifications.length > 0 ? (
                         <div className="divide-y divide-slate-50">
-                          {notifications.map((notification) => {
+                          {notifications.slice(0, 3).map((notification) => {
                             const getIcon = () => {
                               switch(notification.type) {
                                 case 'success': return <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><CheckCircle2 size={16} /></div>;
@@ -238,22 +230,22 @@ const DashboardLayout = () => {
                             return (
                               <div 
                                 key={notification.id} 
-                                className={`p-4 hover:bg-slate-50 transition-all cursor-pointer group relative ${!notification.isRead ? "bg-indigo-50/30" : ""}`}
+                                className={`p-4 hover:bg-slate-50 transition-all cursor-pointer group relative ${!notification.read ? "bg-indigo-50/30" : ""}`}
                                 onClick={() => markAsRead(notification.id)}
                               >
-                                {!notification.isRead && (
+                                {!notification.read && (
                                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-r-md"></div>
                                 )}
                                 <div className="flex gap-4">
                                   {getIcon()}
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between gap-2">
-                                      <h4 className={`text-sm font-bold truncate ${notification.isRead ? "text-slate-700" : "text-indigo-900"}`}>
+                                      <h4 className={`text-sm font-bold truncate ${notification.read ? "text-slate-700" : "text-indigo-900"}`}>
                                         {notification.title}
                                       </h4>
-                                      <span className="text-[10px] font-medium text-slate-400 whitespace-nowrap">{notification.time}</span>
+                                      <span className="text-[10px] font-medium text-slate-400 whitespace-nowrap">{notification.timeAgo}</span>
                                     </div>
-                                    <p className={`text-xs mt-1 leading-relaxed ${notification.isRead ? "text-slate-500 line-clamp-2" : "text-slate-600 font-medium line-clamp-2"}`}>
+                                    <p className={`text-xs mt-1 leading-relaxed ${notification.read ? "text-slate-500 line-clamp-2" : "text-slate-600 font-medium line-clamp-2"}`}>
                                       {notification.message}
                                     </p>
                                   </div>
@@ -274,9 +266,13 @@ const DashboardLayout = () => {
                     </div>
                     
                     <div className="p-2 border-t border-slate-100/80">
-                      <button className="w-full py-2 text-xs font-bold text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all">
+                      <Link 
+                        to="/dashboard/notifications" 
+                        onClick={() => setIsNotificationsOpen(false)}
+                        className="block text-center w-full py-2 text-xs font-bold text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all"
+                      >
                         VIEW ALL NOTIFICATIONS
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 </div>

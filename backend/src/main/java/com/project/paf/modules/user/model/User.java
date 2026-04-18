@@ -31,4 +31,10 @@ public class User {
     @Column(nullable = true)
     private String profileImageUrl;
 
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean emailNotificationsEnabled = true;
+
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean pushNotificationsEnabled = true;
+
 }

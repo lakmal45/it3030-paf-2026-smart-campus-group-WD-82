@@ -64,6 +64,9 @@ const ticketService = {
   /** Delete a comment (author or ADMIN only). */
   deleteComment: (ticketId, commentId) =>
     api.delete(`/tickets/${ticketId}/comments/${commentId}`),
+
+  /** Fetch all technicians (ADMIN only). */
+  getTechnicians: () => api.get("/admin/technicians"),
 };
 
 export default ticketService;

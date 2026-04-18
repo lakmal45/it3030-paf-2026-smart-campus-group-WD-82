@@ -1,5 +1,6 @@
 package com.project.paf.modules.user.service;
 
+import com.project.paf.modules.notification.service.EmailService;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
@@ -12,10 +13,12 @@ public class UserService {
 
     private final UserRepository repo;
     private final PasswordEncoder encoder;
+    private final EmailService emailService;
 
-    public UserService(UserRepository repo, PasswordEncoder encoder) {
+    public UserService(UserRepository repo, PasswordEncoder encoder, EmailService emailService) {
         this.repo = repo;
         this.encoder = encoder;
+        this.emailService = emailService;
     }
 
     public User register(User user) {
@@ -25,7 +28,12 @@ public class UserService {
         // default role
         user.setRole(Role.USER);
 
-        return repo.save(user);
+        User saved = repo.save(user);
+
+        // Send welcome email (async, best-effort)
+        emailService.notifyWelcome(saved.getName(), saved.getEmail(), false);
+
+        return saved;
     }
 
     public User login(String email, String password) {
@@ -57,6 +65,14 @@ public class UserService {
         if (!encoder.matches(oldPassword, user.getPassword())) throw new RuntimeException("Old password incorrect");
         user.setPassword(encoder.encode(newPassword));
         repo.save(user);
+    }
+
+    public User updateNotificationPrefs(Long id, Boolean emailNotificationsEnabled, Boolean pushNotificationsEnabled) {
+        User user = repo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        // Only update fields that were explicitly provided
+        if (emailNotificationsEnabled != null) user.setEmailNotificationsEnabled(emailNotificationsEnabled);
+        if (pushNotificationsEnabled != null) user.setPushNotificationsEnabled(pushNotificationsEnabled);
+        return repo.save(user);
     }
 
     public void deleteUser(Long id) {

@@ -4,7 +4,8 @@ import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
-import com.smartcampus.notification.NotificationService;
+import com.project.paf.modules.notification.service.AppNotificationService;
+import com.project.paf.modules.notification.service.EmailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -35,18 +36,21 @@ public class TicketService {
     private final TicketCommentRepository commentRepository;
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
+    private final EmailService emailService;
+    private final AppNotificationService appNotificationService;
 
     public TicketService(TicketRepository ticketRepository,
                          TicketCommentRepository commentRepository,
                          FileStorageService fileStorageService,
                          UserRepository userRepository,
-                         NotificationService notificationService) {
+                         EmailService emailService,
+                         AppNotificationService appNotificationService) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
-        this.notificationService = notificationService;
+        this.emailService = emailService;
+        this.appNotificationService = appNotificationService;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -73,6 +77,14 @@ public class TicketService {
 
         IncidentTicket saved = ticketRepository.save(ticket);
         log.info("Ticket #{} created by user '{}'", saved.getId(), currentUser.getEmail());
+
+        // Notify the user who created the ticket
+        emailService.notifyTicketCreated(saved);
+
+        // Notify all admins and managers
+        List<User> adminsAndManagers = userRepository.findByRoleIn(List.of(Role.ADMIN, Role.MANAGER));
+        emailService.notifyAdminsAndManagersNewTicket(saved, adminsAndManagers);
+
         return mapToResponse(saved);
     }
 
@@ -138,22 +150,26 @@ public class TicketService {
      */
     @Transactional(readOnly = true)
     public List<TicketResponse> getAllTickets(String statusFilter, String categoryFilter, String priorityFilter, User currentUser) {
-        boolean isPrivileged = currentUser.getRole() == Role.ADMIN
-                || currentUser.getRole() == Role.TECHNICIAN
+        boolean isAdminOrManager = currentUser.getRole() == Role.ADMIN
                 || currentUser.getRole() == Role.MANAGER;
+        boolean isTechnician = currentUser.getRole() == Role.TECHNICIAN;
 
         List<IncidentTicket> tickets;
 
         if (statusFilter != null && !statusFilter.isBlank()) {
             TicketStatus status = parseStatus(statusFilter);
-            if (isPrivileged) {
+            if (isAdminOrManager) {
                 tickets = ticketRepository.findByStatus(status);
+            } else if (isTechnician) {
+                tickets = ticketRepository.findByAssignedTechnicianAndStatus(currentUser, status);
             } else {
                 tickets = ticketRepository.findByCreatedByAndStatus(currentUser, status);
             }
         } else {
-            if (isPrivileged) {
+            if (isAdminOrManager) {
                 tickets = ticketRepository.findAll();
+            } else if (isTechnician) {
+                tickets = ticketRepository.findByAssignedTechnician(currentUser);
             } else {
                 tickets = ticketRepository.findByCreatedBy(currentUser);
             }
@@ -213,11 +229,8 @@ public class TicketService {
         log.info("Ticket #{} status changed: {} → {} by '{}'",
                 id, current, next, currentUser.getEmail());
 
-        notificationService.sendNotification(
-            ticket.getCreatedBy(),
-            "Your ticket #" + ticket.getId() + " status changed to " + next,
-            "TICKET_UPDATE"
-        );
+        // Notify the ticket creator about the status change
+        emailService.notifyStatusChange(updated, current);
 
         return mapToResponse(updated);
     }
@@ -243,6 +256,10 @@ public class TicketService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Technician not found with id: " + technicianId));
 
+        if (technician.getRole() != Role.TECHNICIAN) {
+            throw new IllegalArgumentException("User with id " + technicianId + " is not a Technician.");
+        }
+
         ticket.setAssignedTechnician(technician);
         // Automatically move ticket to IN_PROGRESS when assigned
         if (ticket.getStatus() == TicketStatus.OPEN) {
@@ -253,10 +270,11 @@ public class TicketService {
         log.info("Ticket #{} assigned to technician '{}' by admin '{}'",
                 ticketId, technician.getEmail(), currentUser.getEmail());
 
-        notificationService.sendNotification(
+        appNotificationService.createNotification(
             technician,
+            "Ticket Assigned",
             "You have been assigned to ticket #" + ticket.getId(),
-            "TICKET_UPDATE"
+            "info"
         );
 
         return mapToResponse(updated);
@@ -336,12 +354,13 @@ public class TicketService {
         log.info("Comment #{} added to ticket #{} by '{}'",
                 saved.getId(), ticketId, currentUser.getEmail());
 
-        if (!currentUser.getId().equals(ticket.getCreatedBy().getId())) {
-            notificationService.sendNotification(
-                ticket.getCreatedBy(),
-                "New comment added on your ticket #" + ticket.getId(),
-                "COMMENT_ADDED"
-            );
+        // Notify the ticket creator when an admin, manager, or technician adds a comment
+        boolean isAdminOrManager = currentUser.getRole() == Role.ADMIN
+                || currentUser.getRole() == Role.MANAGER
+                || currentUser.getRole() == Role.TECHNICIAN;
+        if (isAdminOrManager && ticket.getCreatedBy() != null
+                && !ticket.getCreatedBy().getId().equals(currentUser.getId())) {
+            emailService.notifyCommentAdded(ticket, saved, currentUser);
         }
 
         return mapToCommentResponse(saved);

@@ -1,5 +1,6 @@
 package com.project.paf.modules.auth.service;
 
+import com.project.paf.modules.notification.service.EmailService;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
@@ -17,9 +18,11 @@ import java.util.Optional;
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
-    public OAuth2LoginSuccessHandler(UserRepository userRepository) {
+    public OAuth2LoginSuccessHandler(UserRepository userRepository, EmailService emailService) {
         this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
     @Override
@@ -38,7 +41,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         User user;
 
         // Create user if first-time Google login
-        if (existingUser.isEmpty()) {
+        boolean isNewUser = existingUser.isEmpty();
+        if (isNewUser) {
 
             user = new User();
             user.setEmail(email);
@@ -55,6 +59,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         user.setProfileImageUrl(profileImageUrl);
         user = userRepository.save(user);
         request.getSession().setAttribute("user", user);
+
+        // Send welcome email only on first-time signup (async, best-effort)
+        if (isNewUser) {
+            emailService.notifyWelcome(name, email, true);
+        }
 
         // Get role from database
         String role = user.getRole().name();
