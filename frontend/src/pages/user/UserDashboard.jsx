@@ -12,8 +12,9 @@ import {
   Plus,
   Building2,
   Wrench,
+  LayoutGrid,
+  ListChecks,
   BookOpen,
-  TrendingUp,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ticketService from "../../services/ticketService";
@@ -60,7 +61,8 @@ const fmtAgo = (d) => {
   if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  const days = Math.floor(h / 24);
+  return `${days} day${days > 1 ? "s" : ""} ago`;
 };
 
 // ─── Page Loader ──────────────────────────────────────────────────────────────
@@ -83,27 +85,11 @@ const PageLoader = () => (
       viewBox="0 0 56 56"
       style={{ animation: "ud-spin 2s linear infinite" }}
     >
+      <circle cx="28" cy="28" r="24" fill="none" stroke="#e0e7ff" strokeWidth="4" />
       <circle
-        cx="28"
-        cy="28"
-        r="24"
-        fill="none"
-        stroke="#e0e7ff"
-        strokeWidth="4"
-      />
-      <circle
-        cx="28"
-        cy="28"
-        r="24"
-        fill="none"
-        stroke="#6366f1"
-        strokeWidth="4"
-        strokeLinecap="round"
-        strokeDasharray="150"
-        style={{
-          animation: "ud-arc 1.6s ease-in-out infinite",
-          transformOrigin: "center",
-        }}
+        cx="28" cy="28" r="24" fill="none" stroke="#6366f1" strokeWidth="4"
+        strokeLinecap="round" strokeDasharray="150"
+        style={{ animation: "ud-arc 1.6s ease-in-out infinite", transformOrigin: "center" }}
       />
     </svg>
     <p style={{ color: "#475569", fontWeight: 600, fontSize: "0.9rem" }}>
@@ -118,35 +104,29 @@ const Skeleton = ({ className }) => (
   <div className={`skeleton-shimmer rounded-lg ${className}`} />
 );
 
+const RowSkeleton = () => (
+  <div className="flex items-center gap-3 p-3">
+    <Skeleton className="w-8 h-8 flex-shrink-0 rounded-full" />
+    <div className="flex-1 space-y-2">
+      <Skeleton className="h-3.5 w-3/4" />
+      <Skeleton className="h-2.5 w-2/5" />
+    </div>
+    <Skeleton className="h-5 w-16 rounded-full" />
+  </div>
+);
+
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
-const KpiCard = ({ label, value, sub, icon: Icon, accent, loading }) => {
+const StatCard = ({ label, value, sub, icon: Icon, accent, loading }) => {
   const colors = {
-    indigo: {
-      bg: "bg-indigo-50",
-      icon: "text-indigo-500",
-      val: "text-indigo-600",
-    },
-    amber: { bg: "bg-amber-50", icon: "text-amber-500", val: "text-amber-600" },
-    emerald: {
-      bg: "bg-emerald-50",
-      icon: "text-emerald-500",
-      val: "text-emerald-600",
-    },
-    rose: { bg: "bg-rose-50", icon: "text-rose-500", val: "text-rose-600" },
-    blue: { bg: "bg-blue-50", icon: "text-blue-500", val: "text-blue-600" },
-    violet: {
-      bg: "bg-violet-50",
-      icon: "text-violet-500",
-      val: "text-violet-600",
-    },
-    slate: {
-      bg: "bg-slate-100",
-      icon: "text-slate-500",
-      val: "text-slate-700",
-    },
+    amber:   { bg: "bg-amber-50",   icon: "text-amber-500",   val: "text-amber-600",   border: "border-amber-100"   },
+    blue:    { bg: "bg-blue-50",    icon: "text-blue-500",    val: "text-blue-600",    border: "border-blue-100"    },
+    emerald: { bg: "bg-emerald-50", icon: "text-emerald-500", val: "text-emerald-600", border: "border-emerald-100" },
+    rose:    { bg: "bg-rose-50",    icon: "text-rose-500",    val: "text-rose-600",    border: "border-rose-100"    },
+    indigo:  { bg: "bg-indigo-50",  icon: "text-indigo-500",  val: "text-indigo-600",  border: "border-indigo-100"  },
   };
   const c = colors[accent] || colors.indigo;
+
   if (loading)
     return (
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
@@ -155,13 +135,12 @@ const KpiCard = ({ label, value, sub, icon: Icon, accent, loading }) => {
         <Skeleton className="h-3 w-28" />
       </div>
     );
+
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all group">
+    <div className={`bg-white rounded-2xl p-5 shadow-sm border ${c.border} hover:shadow-md transition-all group`}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            {label}
-          </p>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
           <p className={`mt-2 text-3xl font-bold ${c.val}`}>{value}</p>
           {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
         </div>
@@ -175,9 +154,9 @@ const KpiCard = ({ label, value, sub, icon: Icon, accent, loading }) => {
 
 // ─── Panel ────────────────────────────────────────────────────────────────────
 
-const Panel = ({ title, action, onAction, children }) => (
-  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
+const Panel = ({ title, action, onAction, children, className = "" }) => (
+  <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden ${className}`}>
+    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
       <h2 className="text-base font-semibold text-slate-800">{title}</h2>
       {action && (
         <button
@@ -197,10 +176,10 @@ const Panel = ({ title, action, onAction, children }) => (
 const Empty = ({ icon: Icon, text, sub, cta, onCta }) => (
   <div className="flex flex-col items-center py-10 text-slate-400">
     <div className="p-4 bg-slate-50 rounded-2xl mb-3">
-      <Icon size={28} className="opacity-50" />
+      <Icon size={28} className="opacity-40" />
     </div>
-    <p className="text-sm font-semibold text-slate-600">{text}</p>
-    {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+    <p className="text-sm font-medium text-slate-500">{text}</p>
+    {sub && <p className="text-xs text-slate-400 mt-1 text-center">{sub}</p>}
     {cta && (
       <button
         onClick={onCta}
@@ -212,29 +191,30 @@ const Empty = ({ icon: Icon, text, sub, cta, onCta }) => (
   </div>
 );
 
-// ─── Row items ────────────────────────────────────────────────────────────────
+// ─── Ticket Row ───────────────────────────────────────────────────────────────
 
 const TicketRow = ({ ticket, onClick, idx }) => {
   const cfg = STATUS_CFG[ticket.status] || STATUS_CFG.OPEN;
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group animate-card-enter stagger-${Math.min(idx + 1, 6)}`}
+      className={`flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group animate-card-enter stagger-${Math.min(idx + 1, 6)} border-b border-slate-50 last:border-0`}
     >
-      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
+      {/* Status icon */}
+      <div className="p-2 bg-amber-50 rounded-lg flex-shrink-0">
+        <Ticket size={14} className="text-amber-500" />
+      </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800 truncate">
-          {ticket.title}
-        </p>
-        <p className="text-xs text-slate-400 mt-0.5">
-          {ticket.category} · {fmtAgo(ticket.createdAt)}
+        <p className="text-sm font-semibold text-slate-800 truncate">{ticket.title}</p>
+        <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+          <span className={`inline-block w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+          <span className={`font-medium ${cfg.badge.split(" ")[1]}`}>{cfg.label}</span>
+          <span className="text-slate-300">·</span>
+          <span>{ticket.category}</span>
+          <span className="text-slate-300">·</span>
+          <span>{fmtAgo(ticket.createdAt)}</span>
         </p>
       </div>
-      <span
-        className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${cfg.badge}`}
-      >
-        {cfg.label}
-      </span>
       <ChevronRight
         size={14}
         className="text-slate-300 group-hover:text-indigo-400 flex-shrink-0 transition-colors"
@@ -242,97 +222,65 @@ const TicketRow = ({ ticket, onClick, idx }) => {
     </div>
   );
 };
+
+// ─── Booking Row ──────────────────────────────────────────────────────────────
 
 const BookingRow = ({ booking, onClick, idx }) => {
   const cfg = BOOKING_CFG[booking.status] || BOOKING_CFG.PENDING;
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group animate-card-enter stagger-${Math.min(idx + 1, 6)}`}
+      className={`flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group animate-card-enter stagger-${Math.min(idx + 1, 6)} border-b border-slate-50 last:border-0`}
     >
       <div className="p-2 bg-indigo-50 rounded-lg flex-shrink-0">
         <MapPin size={14} className="text-indigo-500" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800 truncate">
-          {booking.resource}
-        </p>
+        <p className="text-sm font-semibold text-slate-800 truncate">{booking.resource}</p>
         <p className="text-xs text-slate-400 mt-0.5">
-          {booking.date} · {booking.startTime?.substring(0, 5)}–
-          {booking.endTime?.substring(0, 5)}
+          {booking.date} · {booking.startTime?.substring(0, 5)}–{booking.endTime?.substring(0, 5)}
         </p>
       </div>
-      <span
-        className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${cfg.badge}`}
-      >
+      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${cfg.badge}`}>
         {cfg.label}
       </span>
-      <ChevronRight
-        size={14}
-        className="text-slate-300 group-hover:text-indigo-400 flex-shrink-0 transition-colors"
-      />
+      <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-400 flex-shrink-0 transition-colors" />
     </div>
   );
 };
+
+// ─── Resource Row ─────────────────────────────────────────────────────────────
 
 const ResourceRow = ({ resource, onClick, idx }) => {
   const avail = resource.available && resource.status === "ACTIVE";
-  const badge = avail
-    ? "bg-emerald-50 text-emerald-700"
-    : resource.status === "IN_MAINTENANCE"
-      ? "bg-amber-50 text-amber-700"
-      : "bg-rose-50 text-rose-700";
-  const label = avail
-    ? "Available"
-    : resource.status === "IN_MAINTENANCE"
-      ? "Maintenance"
-      : resource.status === "OUT_OF_SERVICE"
-        ? "Out of Service"
-        : "Booked";
+  const badge = avail ? "bg-emerald-50 text-emerald-700" : resource.status === "IN_MAINTENANCE" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700";
+  const label = avail ? "Available" : resource.status === "IN_MAINTENANCE" ? "Maintenance" : resource.status === "OUT_OF_SERVICE" ? "Out of Service" : "Booked";
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group animate-card-enter stagger-${Math.min(idx + 1, 6)}`}
+      className={`flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group animate-card-enter stagger-${Math.min(idx + 1, 6)} border-b border-slate-50 last:border-0`}
     >
-      <div
-        className={`p-2 rounded-lg flex-shrink-0 ${avail ? "bg-emerald-50" : "bg-amber-50"}`}
-      >
-        <Building2
-          size={14}
-          className={avail ? "text-emerald-500" : "text-amber-500"}
-        />
+      <div className={`p-2 rounded-lg flex-shrink-0 ${avail ? "bg-emerald-50" : "bg-amber-50"}`}>
+        <Building2 size={14} className={avail ? "text-emerald-500" : "text-amber-500"} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800 truncate">
-          {resource.name}
-        </p>
-        <p className="text-xs text-slate-400 mt-0.5">
-          {resource.location} · {resource.type} · Cap {resource.capacity}
-        </p>
+        <p className="text-sm font-semibold text-slate-800 truncate">{resource.name}</p>
+        <p className="text-xs text-slate-400 mt-0.5">{resource.location} · Cap {resource.capacity}</p>
       </div>
-      <span
-        className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${badge}`}
-      >
-        {label}
-      </span>
-      <ChevronRight
-        size={14}
-        className="text-slate-300 group-hover:text-indigo-400 flex-shrink-0 transition-colors"
-      />
+      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${badge}`}>{label}</span>
+      <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-400 flex-shrink-0 transition-colors" />
     </div>
   );
 };
 
-const RowSkeleton = () => (
-  <div className="flex items-center gap-3 p-3">
-    <Skeleton className="w-8 h-8 flex-shrink-0" />
-    <div className="flex-1 space-y-2">
-      <Skeleton className="h-3.5 w-3/4" />
-      <Skeleton className="h-2.5 w-2/5" />
-    </div>
-    <Skeleton className="h-5 w-16 rounded-full" />
-  </div>
-);
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: "overview",   label: "Overview",    Icon: LayoutGrid  },
+  { id: "tickets",    label: "My Tickets",  Icon: ListChecks  },
+  { id: "bookings",   label: "Bookings",    Icon: Calendar    },
+  { id: "resources",  label: "Resources",   Icon: Building2   },
+];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -340,6 +288,7 @@ const UserDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const [activeTab, setActiveTab] = useState("overview");
   const [tickets, setTickets] = useState(null);
   const [bookings, setBookings] = useState(null);
   const [resources, setResources] = useState(null);
@@ -372,9 +321,7 @@ const UserDashboard = () => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -384,47 +331,39 @@ const UserDashboard = () => {
 
   if (initialLoad) return <PageLoader />;
 
-  // Derived
-  const openT = tickets?.filter((t) => t.status === "OPEN").length ?? 0;
-  const inProgT =
-    tickets?.filter((t) => t.status === "IN_PROGRESS").length ?? 0;
-  const resolvedT =
-    tickets?.filter((t) => ["RESOLVED", "CLOSED"].includes(t.status)).length ??
-    0;
-  const confirmedB =
-    bookings?.filter((b) => b.status === "CONFIRMED").length ?? 0;
-  const pendingB = bookings?.filter((b) => b.status === "PENDING").length ?? 0;
-  const availR =
-    resources?.filter((r) => r.status === "ACTIVE" && r.available).length ?? 0;
-  const maintR =
-    resources?.filter((r) => r.status === "IN_MAINTENANCE").length ?? 0;
+  // Derived stats
+  const openT      = tickets?.filter((t) => t.status === "OPEN").length ?? 0;
+  const inProgT    = tickets?.filter((t) => t.status === "IN_PROGRESS").length ?? 0;
+  const resolvedT  = tickets?.filter((t) => ["RESOLVED", "CLOSED"].includes(t.status)).length ?? 0;
+  const confirmedB = bookings?.filter((b) => b.status === "CONFIRMED").length ?? 0;
+  const pendingB   = bookings?.filter((b) => b.status === "PENDING").length ?? 0;
+  const availR     = resources?.filter((r) => r.status === "ACTIVE" && r.available).length ?? 0;
+  const maintR     = resources?.filter((r) => r.status === "IN_MAINTENANCE").length ?? 0;
 
-  const recentTickets = tickets?.slice(0, 6) ?? [];
-  const recentBookings = bookings?.slice(0, 5) ?? [];
-  const recentResources =
-    resources?.filter((r) => r.status === "ACTIVE").slice(0, 5) ?? [];
-  const recentNotifs = notifications?.slice(0, 6) ?? [];
+  const recentTickets   = tickets?.slice(0, 6) ?? [];
+  const recentBookings  = bookings?.slice(0, 5) ?? [];
+  const recentResources = resources?.filter((r) => r.status === "ACTIVE").slice(0, 5) ?? [];
+  const recentNotifs    = notifications?.slice(0, 6) ?? [];
 
   return (
     <div className="space-y-6 animate-fade-in-up">
+
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
-            {user?.name
-              ? `Hey, ${user.name.split(" ")[0]}! 👋`
-              : "My Dashboard"}
+            {user?.name ? `Welcome back, ${user.name.split(" ")[0]} 👋` : "My Dashboard"}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Your campus activity at a glance
+            Here's what's happening with your campus services.
           </p>
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate("/dashboard/user/create-booking")}
+            onClick={() => navigate("/dashboard/user/create-ticket")}
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors shadow-sm"
           >
-            <Plus size={15} /> New Booking
+            <Plus size={15} /> New Ticket
           </button>
           <button
             onClick={handleRefresh}
@@ -436,6 +375,24 @@ const UserDashboard = () => {
         </div>
       </div>
 
+      {/* ── Tabs ── */}
+      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+        {TABS.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              activeTab === id
+                ? "bg-white text-indigo-700 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <Icon size={14} />
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* ── Error ── */}
       {error && (
         <div className="flex items-center gap-2 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm">
@@ -444,195 +401,213 @@ const UserDashboard = () => {
         </div>
       )}
 
-      {/* ── KPI Row ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          label="Open Tickets"
-          value={openT}
-          sub={`${inProgT} in progress`}
-          icon={Ticket}
-          accent="amber"
-          loading={refreshing}
-        />
-        <KpiCard
-          label="Resolved"
-          value={resolvedT}
-          sub="Tickets closed"
-          icon={CheckCircle}
-          accent="emerald"
-          loading={refreshing}
-        />
-        <KpiCard
-          label="My Bookings"
-          value={bookings?.length ?? 0}
-          sub={`${confirmedB} confirmed · ${pendingB} pending`}
-          icon={Calendar}
-          accent="indigo"
-          loading={refreshing}
-        />
-        <KpiCard
-          label="Alerts"
-          value={unreadCount}
-          sub="Unread notifications"
-          icon={Bell}
-          accent="rose"
-          loading={refreshing}
-        />
-      </div>
+      {/* ══════════════════════════════════════════════════════
+          OVERVIEW TAB
+      ══════════════════════════════════════════════════════ */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
 
-      {/* ── Resource Quick Stats ── */}
-      <div className="grid grid-cols-3 gap-4">
-        <KpiCard
-          label="Total Resources"
-          value={resources?.length ?? 0}
-          sub="On campus"
-          icon={Building2}
-          accent="blue"
-          loading={refreshing}
-        />
-        <KpiCard
-          label="Available Now"
-          value={availR}
-          sub="Ready to book"
-          icon={CheckCircle}
-          accent="emerald"
-          loading={refreshing}
-        />
-        <KpiCard
-          label="In Maintenance"
-          value={maintR}
-          sub="Being serviced"
-          icon={Wrench}
-          accent="amber"
-          loading={refreshing}
-        />
-      </div>
+          {/* ── 4 Stat Cards matching photo ── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              label="Open Tickets"
+              value={openT}
+              sub="Awaiting resolution"
+              icon={Ticket}
+              accent="amber"
+              loading={refreshing}
+            />
+            <StatCard
+              label="In Progress"
+              value={inProgT}
+              sub="Being handled"
+              icon={Clock}
+              accent="blue"
+              loading={refreshing}
+            />
+            <StatCard
+              label="Resolved"
+              value={resolvedT}
+              sub="Completed issues"
+              icon={CheckCircle}
+              accent="emerald"
+              loading={refreshing}
+            />
+            <StatCard
+              label="Alerts"
+              value={unreadCount}
+              sub="Unread notifications"
+              icon={Bell}
+              accent="rose"
+              loading={refreshing}
+            />
+          </div>
 
-      {/* ── Main Grid: Tickets + Notifications ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Recent Tickets — wider */}
-        <div className="lg:col-span-3">
-          <Panel
-            title="Recent Tickets"
-            action="View All →"
-            onAction={() => navigate("/tickets")}
-          >
-            {refreshing ? (
-              [1, 2, 3, 4].map((i) => <RowSkeleton key={i} />)
-            ) : recentTickets.length === 0 ? (
-              <Empty
-                icon={Ticket}
-                text="No tickets yet"
-                sub="Submit a ticket when you spot a campus issue."
-              />
-            ) : (
-              recentTickets.map((t, i) => (
-                <TicketRow
-                  key={t.id}
-                  ticket={t}
-                  idx={i}
-                  onClick={() => navigate("/tickets")}
+          {/* ── Main 2-col: My Recent Tickets + Recent Notifications ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+            {/* My Recent Tickets — wider (3/5) */}
+            <Panel
+              title="My Recent Tickets"
+              action="View All Tickets →"
+              onAction={() => navigate("/tickets")}
+              className="lg:col-span-3"
+            >
+              {refreshing ? (
+                [1, 2, 3, 4, 5].map((i) => <RowSkeleton key={i} />)
+              ) : recentTickets.length === 0 ? (
+                <Empty
+                  icon={Ticket}
+                  text="No tickets yet"
+                  sub="Submit a ticket when you spot a campus issue."
+                  cta="Create Ticket"
+                  onCta={() => navigate("/dashboard/user/create-ticket")}
                 />
+              ) : (
+                <>
+                  {recentTickets.map((t, i) => (
+                    <TicketRow
+                      key={t.id}
+                      ticket={t}
+                      idx={i}
+                      onClick={() => navigate("/tickets")}
+                    />
+                  ))}
+                  <div className="pt-2 text-center">
+                    <button
+                      onClick={() => navigate("/tickets")}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+                    >
+                      View All Tickets →
+                    </button>
+                  </div>
+                </>
+              )}
+            </Panel>
+
+            {/* Recent Notifications — narrower (2/5) */}
+            <Panel
+              title="Recent Notifications"
+              action="View All Notifications →"
+              onAction={() => navigate("/notifications")}
+              className="lg:col-span-2"
+            >
+              {refreshing ? (
+                [1, 2, 3].map((i) => <RowSkeleton key={i} />)
+              ) : recentNotifs.length === 0 ? (
+                <Empty
+                  icon={Bell}
+                  text="No notifications yet"
+                />
+              ) : (
+                <div className="space-y-3">
+                  {recentNotifs.map((n, i) => (
+                    <div
+                      key={n.id}
+                      className={`flex gap-3 animate-card-enter stagger-${Math.min(i + 1, 6)}`}
+                    >
+                      <div
+                        className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${n.read ? "bg-slate-200" : "bg-indigo-500"}`}
+                      />
+                      <div className="min-w-0">
+                        <p className={`text-sm ${n.read ? "text-slate-500" : "text-slate-800 font-medium"} leading-snug`}>
+                          {n.message}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-0.5">{fmtAgo(n.createdAt)}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t border-slate-50">
+                    <button
+                      onClick={() => navigate("/notifications")}
+                      className="w-full text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors text-center"
+                    >
+                      View All Notifications →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </Panel>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          MY TICKETS TAB
+      ══════════════════════════════════════════════════════ */}
+      {activeTab === "tickets" && (
+        <div className="space-y-6">
+          {/* Stats row */}
+          <div className="grid grid-cols-3 gap-4">
+            <StatCard label="Open"        value={openT}     sub="Awaiting resolution" icon={Ticket}      accent="amber"   loading={refreshing} />
+            <StatCard label="In Progress" value={inProgT}   sub="Being handled"       icon={Clock}       accent="blue"    loading={refreshing} />
+            <StatCard label="Resolved"    value={resolvedT} sub="Completed"           icon={CheckCircle} accent="emerald" loading={refreshing} />
+          </div>
+
+          <Panel title="All My Tickets" action="+ New Ticket" onAction={() => navigate("/dashboard/user/create-ticket")}>
+            {refreshing ? (
+              [1, 2, 3, 4, 5].map((i) => <RowSkeleton key={i} />)
+            ) : recentTickets.length === 0 ? (
+              <Empty icon={Ticket} text="No tickets yet" cta="Create Ticket" onCta={() => navigate("/dashboard/user/create-ticket")} />
+            ) : (
+              tickets?.map((t, i) => (
+                <TicketRow key={t.id} ticket={t} idx={i} onClick={() => navigate("/tickets")} />
               ))
             )}
           </Panel>
         </div>
+      )}
 
-        {/* Notifications — narrower */}
-        <div className="lg:col-span-2">
-          <Panel
-            title="Notifications"
-            action="See All →"
-            onAction={() => navigate("/notifications")}
-          >
+      {/* ══════════════════════════════════════════════════════
+          BOOKINGS TAB
+      ══════════════════════════════════════════════════════ */}
+      {activeTab === "bookings" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-3 gap-4">
+            <StatCard label="Total"     value={bookings?.length ?? 0} sub="All bookings"   icon={Calendar}     accent="indigo"  loading={refreshing} />
+            <StatCard label="Confirmed" value={confirmedB}             sub="Active bookings" icon={CheckCircle} accent="emerald" loading={refreshing} />
+            <StatCard label="Pending"   value={pendingB}               sub="Awaiting approval" icon={Clock}    accent="amber"   loading={refreshing} />
+          </div>
+
+          <Panel title="My Bookings" action="+ New Booking" onAction={() => navigate("/dashboard/user/create-booking")}>
             {refreshing ? (
-              [1, 2, 3, 4].map((i) => <RowSkeleton key={i} />)
-            ) : recentNotifs.length === 0 ? (
-              <Empty icon={Bell} text="No notifications" />
+              [1, 2, 3].map((i) => <RowSkeleton key={i} />)
+            ) : recentBookings.length === 0 ? (
+              <Empty icon={Calendar} text="No bookings yet" sub="Reserve campus resources anytime." cta="Create Booking" onCta={() => navigate("/dashboard/user/create-booking")} />
             ) : (
-              <div className="space-y-3">
-                {recentNotifs.map((n, i) => (
-                  <div
-                    key={n.id}
-                    className={`flex gap-3 animate-card-enter stagger-${Math.min(i + 1, 6)}`}
-                  >
-                    <div
-                      className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${n.read ? "bg-slate-200" : "bg-indigo-500"}`}
-                    />
-                    <div className="min-w-0">
-                      <p
-                        className={`text-sm ${n.read ? "text-slate-500" : "text-slate-800 font-medium"} leading-snug`}
-                      >
-                        {n.message}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {fmtAgo(n.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              bookings?.map((b, i) => (
+                <BookingRow key={b.id} booking={b} idx={i} onClick={() => navigate("/dashboard/user/bookings")} />
+              ))
             )}
           </Panel>
         </div>
-      </div>
+      )}
 
-      {/* ── Bottom Grid: Bookings + Resources ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* My Bookings */}
-        <Panel
-          title="My Bookings"
-          action="View All →"
-          onAction={() => navigate("/dashboard/user/bookings")}
-        >
-          {refreshing ? (
-            [1, 2, 3].map((i) => <RowSkeleton key={i} />)
-          ) : recentBookings.length === 0 ? (
-            <Empty
-              icon={Calendar}
-              text="No bookings yet"
-              sub="Reserve campus resources anytime."
-              cta="Create Booking"
-              onCta={() => navigate("/dashboard/user/create-booking")}
-            />
-          ) : (
-            recentBookings.map((b, i) => (
-              <BookingRow
-                key={b.id}
-                booking={b}
-                idx={i}
-                onClick={() => navigate("/dashboard/user/bookings")}
-              />
-            ))
-          )}
-        </Panel>
+      {/* ══════════════════════════════════════════════════════
+          RESOURCES TAB
+      ══════════════════════════════════════════════════════ */}
+      {activeTab === "resources" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-3 gap-4">
+            <StatCard label="Total Resources" value={resources?.length ?? 0} sub="On campus"      icon={Building2}   accent="blue"    loading={refreshing} />
+            <StatCard label="Available Now"   value={availR}                  sub="Ready to book"  icon={CheckCircle} accent="emerald" loading={refreshing} />
+            <StatCard label="In Maintenance"  value={maintR}                  sub="Being serviced" icon={Wrench}      accent="amber"   loading={refreshing} />
+          </div>
 
-        {/* Available Resources */}
-        <Panel
-          title="Available Resources"
-          action="Browse All →"
-          onAction={() => navigate("/dashboard/user/resources")}
-        >
-          {refreshing ? (
-            [1, 2, 3].map((i) => <RowSkeleton key={i} />)
-          ) : recentResources.length === 0 ? (
-            <Empty
-              icon={Building2}
-              text="No active resources"
-              sub="Check back later."
-            />
-          ) : (
-            recentResources.map((r, i) => (
-              <ResourceRow
-                key={r.id}
-                resource={r}
-                idx={i}
-                onClick={() => navigate("/dashboard/user/resources")}
-              />
-            ))
-          )}
-        </Panel>
-      </div>
+          <Panel title="Campus Resources" action="Browse All →" onAction={() => navigate("/dashboard/user/resources")}>
+            {refreshing ? (
+              [1, 2, 3].map((i) => <RowSkeleton key={i} />)
+            ) : recentResources.length === 0 ? (
+              <Empty icon={Building2} text="No active resources" sub="Check back later." />
+            ) : (
+              resources?.filter(r => r.status === "ACTIVE").map((r, i) => (
+                <ResourceRow key={r.id} resource={r} idx={i} onClick={() => navigate("/dashboard/user/resources")} />
+              ))
+            )}
+          </Panel>
+        </div>
+      )}
+
     </div>
   );
 };

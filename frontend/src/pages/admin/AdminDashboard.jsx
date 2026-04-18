@@ -591,42 +591,155 @@ const AdminDashboard = () => {
         </Panel>
       </div>
 
-      {/* ── Users + Bookings + Resources ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Users by Role */}
-        <Panel
-          title="Users by Role"
-          action="Manage →"
-          onAction={() => navigate("/dashboard/admin/users")}
-        >
+      {/* ── User Role Overview (full-width) ── */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-800">User Role Overview</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Distribution of {totalUsers} registered users across all roles</p>
+          </div>
+          <button
+            onClick={() => navigate("/dashboard/admin/users")}
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1"
+          >
+            Manage All Users <ChevronRight size={13} />
+          </button>
+        </div>
+
+        {/* Role stat cards */}
+        {refreshing ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {[1,2,3,4].map(i => <div key={i} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100"><Skeleton className="h-3 w-20 mb-3" /><Skeleton className="h-8 w-12 mb-2" /><Skeleton className="h-2 w-full rounded-full" /></div>)}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {[
+              { role: "ADMIN",      label: "Admins",      desc: "Full system access",      accent: { card: "from-violet-50 to-purple-50", border: "border-violet-100", val: "text-violet-700", bar: "bg-violet-500", badge: "bg-violet-100 text-violet-700" } },
+              { role: "MANAGER",    label: "Managers",    desc: "Oversee operations",       accent: { card: "from-blue-50 to-sky-50",    border: "border-blue-100",   val: "text-blue-700",   bar: "bg-blue-500",   badge: "bg-blue-100 text-blue-700"   } },
+              { role: "TECHNICIAN", label: "Technicians", desc: "Handle maintenance",       accent: { card: "from-emerald-50 to-teal-50", border: "border-emerald-100", val: "text-emerald-700", bar: "bg-emerald-500", badge: "bg-emerald-100 text-emerald-700" } },
+              { role: "USER",       label: "Users",       desc: "Submit & track tickets",  accent: { card: "from-slate-50 to-gray-50",  border: "border-slate-100",  val: "text-slate-700",  bar: "bg-slate-500",  badge: "bg-slate-100 text-slate-600"  } },
+            ].map(({ role, label, desc, accent }, i) => {
+              const cfg = ROLE_CFG[role];
+              const Icon = cfg.Icon;
+              const count = roleCounts[role] || 0;
+              const pct = totalUsers > 0 ? Math.round((count / totalUsers) * 100) : 0;
+              const usersInRole = users ? users.filter(u => u.role === role).slice(0, 3) : [];
+              return (
+                <div
+                  key={role}
+                  onClick={() => navigate("/dashboard/admin/users")}
+                  className={`bg-gradient-to-br ${accent.card} border ${accent.border} rounded-2xl p-5 cursor-pointer hover:shadow-md transition-all group animate-card-enter stagger-${i+1}`}
+                >
+                  {/* Icon + badge */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={`p-2.5 rounded-xl ${cfg.bg}`}>
+                      <Icon size={18} className={cfg.color} />
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${accent.badge}`}>{pct}%</span>
+                  </div>
+
+                  {/* Count */}
+                  <p className={`text-3xl font-extrabold ${accent.val} mb-0.5`}>{count}</p>
+                  <p className="text-sm font-semibold text-slate-700">{label}</p>
+                  <p className="text-xs text-slate-400 mt-0.5 mb-3">{desc}</p>
+
+                  {/* Progress bar */}
+                  <div className="w-full bg-white/70 rounded-full h-1.5 mb-3">
+                    <div className={`${accent.bar} h-1.5 rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
+                  </div>
+
+                  {/* Mini avatars */}
+                  {usersInRole.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      {usersInRole.map((u, idx) => {
+                        const ini = u.name ? u.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0,2) : u.email?.[0]?.toUpperCase() || "?";
+                        return (
+                          <div key={u.id} className={`w-6 h-6 rounded-full ${cfg.bg} ${cfg.color} flex items-center justify-center text-[10px] font-bold border-2 border-white -ml-${idx > 0 ? 1 : 0}`}>
+                            {ini}
+                          </div>
+                        );
+                      })}
+                      {count > 3 && <span className="text-[10px] text-slate-400 ml-1.5 font-medium">+{count - 3} more</span>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Detailed user breakdown table */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
+            <h3 className="text-sm font-semibold text-slate-800">All Users by Role</h3>
+            <div className="flex items-center gap-2">
+              {["ADMIN","MANAGER","TECHNICIAN","USER"].map(role => {
+                const cfg = ROLE_CFG[role];
+                return (
+                  <span key={role} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>
+                    {role}: {roleCounts[role] || 0}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
           {refreshing ? (
-            [1, 2, 3, 4].map((i) => <RowSkeleton key={i} />)
+            <div className="p-4 space-y-1">{[1,2,3,4,5].map(i => <RowSkeleton key={i} />)}</div>
+          ) : !users || users.length === 0 ? (
+            <div className="py-12"><Empty icon={Users} text="No users registered yet" /></div>
           ) : (
-            <div className="space-y-2">
-              {["ADMIN", "MANAGER", "TECHNICIAN", "USER"].map((role, i) => {
+            <div className="divide-y divide-slate-50">
+              {["ADMIN","MANAGER","TECHNICIAN","USER"].map(role => {
                 const cfg = ROLE_CFG[role];
                 const Icon = cfg.Icon;
+                const roleUsers = users.filter(u => u.role === role);
+                if (roleUsers.length === 0) return null;
                 return (
-                  <div
-                    key={role}
-                    className={`flex items-center justify-between p-3 rounded-xl ${cfg.bg} animate-card-enter stagger-${i + 1}`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Icon size={15} className={cfg.color} />
-                      <span className={`text-sm font-semibold ${cfg.color}`}>
-                        {role}
-                      </span>
+                  <div key={role}>
+                    {/* Role section header */}
+                    <div className={`flex items-center gap-2 px-6 py-2 ${cfg.bg}`}>
+                      <Icon size={13} className={cfg.color} />
+                      <span className={`text-xs font-bold uppercase tracking-wider ${cfg.color}`}>{role}</span>
+                      <span className={`ml-auto text-xs font-semibold ${cfg.color}`}>{roleUsers.length} user{roleUsers.length !== 1 ? "s" : ""}</span>
                     </div>
-                    <span className={`text-base font-bold ${cfg.color}`}>
-                      {roleCounts[role] || 0}
-                    </span>
+                    {/* Users in this role */}
+                    <div>
+                      {roleUsers.slice(0, 4).map((u, i) => {
+                        const ini = u.name ? u.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0,2) : u.email?.[0]?.toUpperCase() || "?";
+                        return (
+                          <div key={u.id} className={`flex items-center gap-3 px-6 py-3 hover:bg-slate-50 transition-colors animate-card-enter stagger-${Math.min(i+1,6)}`}>
+                            <div className={`w-9 h-9 rounded-full ${cfg.bg} ${cfg.color} flex items-center justify-center font-bold text-xs flex-shrink-0`}>
+                              {ini}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-slate-800 truncate">{u.name || "—"}</p>
+                              <p className="text-xs text-slate-400 truncate">{u.email}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>{role}</span>
+                              <ChevronRight size={13} className="text-slate-300" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {roleUsers.length > 4 && (
+                        <div className="px-6 py-2">
+                          <button onClick={() => navigate("/dashboard/admin/users")} className={`text-xs font-semibold ${cfg.color} hover:underline`}>
+                            +{roleUsers.length - 4} more {role.toLowerCase()}s →
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
           )}
-        </Panel>
+        </div>
+      </div>
 
+      {/* ── Bookings + Resources ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Bookings */}
         <Panel
           title="Recent Bookings"
@@ -691,60 +804,7 @@ const AdminDashboard = () => {
         </Panel>
       </div>
 
-      {/* ── Recently Joined Users ── */}
-      <Panel
-        title="Recently Joined Users"
-        action="Manage All →"
-        onAction={() => navigate("/dashboard/admin/users")}
-      >
-        {refreshing ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[1, 2, 3].map((i) => (
-              <RowSkeleton key={i} />
-            ))}
-          </div>
-        ) : recentUsers.length === 0 ? (
-          <Empty icon={Users} text="No users yet" />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {recentUsers.map((u, i) => {
-              const cfg = ROLE_CFG[u.role] || ROLE_CFG.USER;
-              const Icon = cfg.Icon;
-              const initials = u.name
-                ? u.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2)
-                : u.email?.[0]?.toUpperCase() || "?";
-              return (
-                <div
-                  key={u.id}
-                  className={`flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors animate-card-enter stagger-${Math.min(i + 1, 6)}`}
-                >
-                  <div
-                    className={`w-10 h-10 rounded-full ${cfg.bg} ${cfg.color} flex items-center justify-center font-bold text-sm flex-shrink-0`}
-                  >
-                    {initials}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">
-                      {u.name || "—"}
-                    </p>
-                    <p className="text-xs text-slate-400 truncate">{u.email}</p>
-                  </div>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}
-                  >
-                    {u.role}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Panel>
+
     </div>
   );
 };
