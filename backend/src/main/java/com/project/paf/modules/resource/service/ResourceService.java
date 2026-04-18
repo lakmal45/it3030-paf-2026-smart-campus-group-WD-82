@@ -7,6 +7,7 @@ import com.project.paf.modules.resource.model.Resource;
 import com.project.paf.modules.resource.model.ResourceStatus;
 import com.project.paf.modules.resource.repository.ResourceRepository;
 import jakarta.validation.Valid;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -41,7 +42,7 @@ public class ResourceService {
                 .toList();
     }
 
-    public ResourceResponseDTO getResourceById(Long id) {
+    public ResourceResponseDTO getResourceById(@NonNull Long id) {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + id));
         return toResponseDTO(resource);
@@ -49,11 +50,11 @@ public class ResourceService {
 
     public ResourceResponseDTO createResource(@Valid ResourceRequestDTO requestDTO) {
         Resource resource = toEntity(requestDTO);
-        Resource savedResource = resourceRepository.save(resource);
+        Resource savedResource = resourceRepository.save(java.util.Objects.requireNonNull(resource));
         return toResponseDTO(savedResource);
     }
 
-    public ResourceResponseDTO updateResource(Long id, @Valid ResourceRequestDTO requestDTO) {
+    public ResourceResponseDTO updateResource(@NonNull Long id, @Valid ResourceRequestDTO requestDTO) {
         Resource existingResource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + id));
 
@@ -65,11 +66,11 @@ public class ResourceService {
         existingResource.setStatus(requestDTO.getStatus());
         existingResource.setDescription(requestDTO.getDescription());
 
-        Resource updatedResource = resourceRepository.save(existingResource);
+        Resource updatedResource = resourceRepository.save(java.util.Objects.requireNonNull(existingResource));
         return toResponseDTO(updatedResource);
     }
 
-    public ResourceResponseDTO updateResourceStatus(Long id, ResourceStatus status) {
+    public ResourceResponseDTO updateResourceStatus(@NonNull Long id, ResourceStatus status) {
         Resource existingResource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + id));
         
@@ -82,14 +83,14 @@ public class ResourceService {
             existingResource.setAvailable(false);
         }
 
-        Resource updatedResource = resourceRepository.save(existingResource);
+        Resource updatedResource = resourceRepository.save(java.util.Objects.requireNonNull(existingResource));
         return toResponseDTO(updatedResource);
     }
 
-    public void deleteResource(Long id) {
+    public void deleteResource(@NonNull Long id) {
         Resource existingResource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + id));
-        resourceRepository.delete(existingResource);
+        resourceRepository.delete(java.util.Objects.requireNonNull(existingResource));
     }
 
     private Resource toEntity(ResourceRequestDTO requestDTO) {

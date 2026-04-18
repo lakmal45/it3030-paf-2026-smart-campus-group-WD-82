@@ -129,8 +129,8 @@ const UserDashboard = () => {
   const { user }  = useAuth();
   const navigate  = useNavigate();
 
-  const [tickets,       setTickets]       = useState(null);
-  const [notifications, setNotifications] = useState(null);
+  const [tickets,       setTickets]       = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [unreadCount,   setUnreadCount]   = useState(null);
   const [initialLoad,   setInitialLoad]   = useState(true);
   const [refreshing,    setRefreshing]    = useState(false);
@@ -143,8 +143,8 @@ const UserDashboard = () => {
         api.get('/notifications'),
         api.get('/notifications/unread-count'),
       ]);
-      setTickets(ticketsRes.data?.content ?? ticketsRes.data);
-      setNotifications(notifsRes.data);
+      setTickets(ticketsRes.data?.content || []);
+      setNotifications(notifsRes.data || []);
       setUnreadCount(countRes.data);
       setError(null);
     } catch (err) {
@@ -262,7 +262,7 @@ const UserDashboard = () => {
                 return (
                   <div
                     key={ticket.id}
-                    onClick={() => navigate('/tickets')}
+                    onClick={() => navigate(`./tickets/${ticket.id}`)}
                     className={`p-4 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer flex justify-between items-center group animate-card-enter ${staggerClass}`}
                   >
                     <div className="flex items-center gap-4 min-w-0">
@@ -270,7 +270,7 @@ const UserDashboard = () => {
                         <Ticket size={18} />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-semibold text-slate-800 truncate">{ticket.title}</h4>
+                        <h4 className="font-semibold text-slate-800 truncate">{ticket.description}</h4>
                         <div className="flex items-center gap-2 mt-1">
                           <div className={`w-2 h-2 rounded-full ${cfg.ring}`} />
                           <span className={`text-xs font-medium ${cfg.color}`}>{cfg.label}</span>
@@ -287,7 +287,7 @@ const UserDashboard = () => {
           </div>
           {!refreshing && tickets && tickets.length > 0 && (
             <button
-              onClick={() => navigate('/tickets')}
+              onClick={() => navigate('./tickets')}
               className="mt-6 w-full py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
             >
               View All Tickets →
@@ -321,7 +321,7 @@ const UserDashboard = () => {
             )}
           </div>
           <button
-            onClick={() => navigate('/notifications')}
+            onClick={() => navigate('/dashboard/notifications')}
             className="w-full mt-6 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
           >
             View All Notifications →

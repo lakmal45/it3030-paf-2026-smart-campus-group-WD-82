@@ -147,9 +147,11 @@ const ActivitySkeleton = () => (
 const AdminDashboard = () => {
   const navigate = useNavigate();
 
-  const [users,         setUsers]         = useState(null);
-  const [tickets,       setTickets]       = useState(null);
-  const [notifications, setNotifications] = useState(null);
+  const [users,         setUsers]         = useState([]);
+  const [tickets,       setTickets]       = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [totalTicketCount, setTotalTicketCount] = useState(0);
+  const [technicianWorkload, setTechnicianWorkload] = useState([]);
   const [initialLoad,   setInitialLoad]   = useState(true);
   const [refreshing,    setRefreshing]    = useState(false);
   const [error,         setError]         = useState(null);
@@ -161,9 +163,21 @@ const AdminDashboard = () => {
         ticketService.getAll(),
         api.get('/notifications'),
       ]);
-      setUsers(usersRes.data);
-      setTickets(ticketsRes.data?.content ?? ticketsRes.data);
-      setNotifications(notifsRes.data);
+      setUsers(usersRes.data || []);
+      setTickets(ticketsRes.data?.content || []);
+      setTotalTicketCount(ticketsRes.data?.totalElements ?? ticketsRes.data?.content?.length ?? 0);
+      setNotifications(notifsRes.data || []);
+      
+      // Calculate Workload
+      const allTickets = ticketsRes.data?.content || [];
+      const techTickets = allTickets.filter(t => t.assignedTechnicianName && t.status !== 'CLOSED');
+      const workloadMap = techTickets.reduce((acc, t) => {
+        acc[t.assignedTechnicianName] = (acc[t.assignedTechnicianName] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const workloadData = Object.entries(workloadMap).map(([name, count]) => ({ name, count }));
+      setTechnicianWorkload(workloadData.sort((a,b) => b.count - a.count).slice(0, 5));
       setError(null);
     } catch (err) {
       console.error('AdminDashboard fetch error:', err);
@@ -186,7 +200,7 @@ const AdminDashboard = () => {
 
   // ── Derived stats ──────────────────────────────────────────────────────────
   const totalUsers      = users?.length    ?? 0;
-  const totalTickets    = tickets?.length  ?? 0;
+  const totalTickets    = totalTicketCount;
   const openTickets     = tickets?.filter(t => t.status === 'OPEN').length        ?? 0;
   const resolvedTickets = tickets?.filter(t => ['RESOLVED','CLOSED'].includes(t.status)).length ?? 0;
 
@@ -316,7 +330,33 @@ const AdminDashboard = () => {
 
         {/* Recent Activity */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 animate-card-enter stagger-6">
-          <h2 className="text-xl font-semibold text-slate-800 mb-6">Recent Activity</h2>
+          <h2 className="text-xl font-semibold text-slate-800 mb-6">Technician Workload (Internal)</h2>
+          {technicianWorkload.length === 0 ? (
+             <div className="h-[260px] flex flex-col items-center justify-center text-slate-400">
+               <Wrench size={32} className="mb-2 opacity-30" />
+               <p className="text-xs font-medium">No assignments yet</p>
+             </div>
+          ) : (
+            <div className="h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                 <BarChart layout="vertical" data={technicianWorkload} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                    <XAxis type="number" axisLine={false} tickLine={false} hide />
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} width={80} />
+                    <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                    <Bar dataKey="count" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={20} />
+                 </BarChart>
+              </ResponsiveContainer>
+              <div className="mt-2 text-[10px] text-slate-400 font-medium text-center italic">Showing active tickets per technician</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Full Activity Feed (Move here or keep layout) */}
+        <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <h2 className="text-xl font-semibold text-slate-800 mb-6 font-display">Recent Activity</h2>
           <div className="space-y-5">
             {refreshing ? (
               <> <ActivitySkeleton /> <ActivitySkeleton /> <ActivitySkeleton /> <ActivitySkeleton /> </>

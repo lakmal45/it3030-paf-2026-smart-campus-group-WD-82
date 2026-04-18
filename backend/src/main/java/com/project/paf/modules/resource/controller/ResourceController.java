@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,11 +38,12 @@ public class ResourceController {
     @Operation(summary = "Get resource by ID", description = "Retrieves details of a specific resource using its ID")
     @ApiResponse(responseCode = "200", description = "Resource found")
     @ApiResponse(responseCode = "404", description = "Resource not found")
-    public ResponseEntity<ResourceResponseDTO> getResourceById(@PathVariable Long id) {
+    public ResponseEntity<ResourceResponseDTO> getResourceById(@PathVariable @NonNull Long id) {
         return ResponseEntity.ok(resourceService.getResourceById(id));
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Create a new resource", description = "Adds a new resource to the campus catalogue (Admin only)")
     @ApiResponse(responseCode = "201", description = "Resource created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data")
@@ -50,18 +53,20 @@ public class ResourceController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update an existing resource", description = "Modifies an existing resource's details (Admin only)")
     @ApiResponse(responseCode = "200", description = "Resource updated successfully")
     @ApiResponse(responseCode = "404", description = "Resource not found")
-    public ResponseEntity<ResourceResponseDTO> updateResource(@PathVariable Long id, @Valid @RequestBody ResourceRequestDTO requestDTO) {
+    public ResponseEntity<ResourceResponseDTO> updateResource(@PathVariable @NonNull Long id, @Valid @RequestBody ResourceRequestDTO requestDTO) {
         return ResponseEntity.ok(resourceService.updateResource(id, requestDTO));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Delete a resource", description = "Removes a resource from the system (Admin only)")
     @ApiResponse(responseCode = "204", description = "Resource deleted successfully")
     @ApiResponse(responseCode = "404", description = "Resource not found")
-    public ResponseEntity<Void> deleteResource(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteResource(@PathVariable @NonNull Long id) {
         resourceService.deleteResource(id);
         return ResponseEntity.noContent().build();
     }
@@ -80,10 +85,11 @@ public class ResourceController {
     }
 
     @PatchMapping("/{id}/status")
-    @Operation(summary = "Update resource status", description = "Toggles resource status (Admin/Manager only)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update resource status", description = "Toggles resource status (Admin only)")
     @ApiResponse(responseCode = "200", description = "Status updated successfully")
     public ResponseEntity<ResourceResponseDTO> updateStatus(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @RequestParam ResourceStatus status
     ) {
         return ResponseEntity.ok(resourceService.updateResourceStatus(id, status));

@@ -43,12 +43,11 @@ const ResourceListPage = () => {
   };
 
   const dashboardPath = getDashboardPath();
-  const isAdmin = user?.role === "ADMIN" || user?.role === "ROLE_ADMIN";
-  const isManager = user?.role === "MANAGER" || user?.role === "ROLE_MANAGER";
-  const isUser = user?.role === "USER" || user?.role === "ROLE_USER"; 
+  const normalizedRole = user?.role?.toUpperCase() || "";
+  const isAdmin = normalizedRole.includes("ADMIN");
   
-  // Broadening permissions to unblock Member 1's development
-  const canModify = isAdmin || isManager || isUser;
+  // Strict RBAC: Only ADMIN can modify resources (Add/Edit/Delete/Status)
+  const canModify = isAdmin;
 
   const fetchResources = useCallback(async (filters = {}) => {
     setIsLoading(true);

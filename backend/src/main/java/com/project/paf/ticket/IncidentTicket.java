@@ -1,5 +1,6 @@
 package com.project.paf.ticket;
 
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -94,6 +95,14 @@ public class IncidentTicket {
 
     /** How the reporter prefers to be contacted (e.g. email, phone). */
     private String preferredContact;
+
+    /** Rating provided by the user after ticket resolution (1-5). */
+    @Column(name = "user_rating")
+    private Integer rating;
+
+    /** Feedback text provided by the user after ticket resolution. */
+    @Column(name = "user_feedback", length = 1000)
+    private String userFeedback;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

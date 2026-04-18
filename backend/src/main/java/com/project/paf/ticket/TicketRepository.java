@@ -1,4 +1,5 @@
 package com.project.paf.ticket;
+
 import com.project.paf.modules.user.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,7 +41,8 @@ public interface TicketRepository extends JpaRepository<IncidentTicket, Long>, J
 
     @Override
     @EntityGraph(attributePaths = {"createdBy", "assignedTechnician", "imageUrls"})
-    Optional<IncidentTicket> findById(Long id);
+    @org.springframework.lang.NonNull
+    Optional<IncidentTicket> findById(@org.springframework.lang.NonNull Long id);
 
     /** Find all tickets created by a specific user. */
     List<IncidentTicket> findByCreatedBy(User user);

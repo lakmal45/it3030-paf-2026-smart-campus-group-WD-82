@@ -29,6 +29,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ResourceController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @DisplayName("ResourceController Integration Tests")
+// Suppress null-safety warnings for the entire class because the Spring MockMvc 
+// and Hamcrest matcher DSLs are not fully null-annotated, causing numerous 
+// false positives in a strict null-safety environment.
+@SuppressWarnings("null")
 class ResourceControllerTest {
 
     @Autowired

@@ -37,10 +37,9 @@ const ResourceFormPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const isAdmin = user?.role === "ADMIN" || user?.role === "ROLE_ADMIN";
-  const isManager = user?.role === "MANAGER" || user?.role === "ROLE_MANAGER";
-  const isUser = user?.role === "USER" || user?.role === "ROLE_USER";
-  const isAuthorized = isAdmin || isManager || isUser;
+  const normalizedRole = user?.role?.toUpperCase() || "";
+  const isAdmin = normalizedRole.includes("ADMIN");
+  const isAuthorized = isAdmin;
 
   useEffect(() => {
     if (!isAuthorized && !isLoading) {

@@ -63,10 +63,10 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromAddress, fromName);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(htmlContent, true);
+            helper.setFrom(java.util.Objects.requireNonNull(fromAddress), java.util.Objects.requireNonNull(fromName));
+            helper.setTo(java.util.Objects.requireNonNull(to));
+            helper.setSubject(java.util.Objects.requireNonNull(subject));
+            helper.setText(java.util.Objects.requireNonNull(htmlContent), true);
 
             mailSender.send(message);
             log.info("Email sent via SMTP to '{}' | subject: '{}'", to, subject);

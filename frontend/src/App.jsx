@@ -46,6 +46,7 @@ import AllBookings from "./pages/admin/AllBookings";
 import Reports from "./pages/manager/Reports";
 import BookingAnalytics from "./pages/manager/BookingAnalytics";
 import Maintenance from "./pages/manager/Maintenance";
+import ManagerTickets from "./pages/manager/ManagerTickets";
 import ResourceListPage from "./pages/manager/ResourceListPage";
 import ResourceDetailPage from "./pages/manager/ResourceDetailPage";
 import ResourceFormPage from "./pages/manager/ResourceFormPage";
@@ -353,6 +354,22 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
                       <Maintenance />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="tickets"
+                  element={
+                    <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                      <ManagerTickets />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="tickets/:id"
+                  element={
+                    <ProtectedRoute allowedRoles={["MANAGER", "ROLE_MANAGER"]}>
+                      <TicketDetail />
                     </ProtectedRoute>
                   }
                 />

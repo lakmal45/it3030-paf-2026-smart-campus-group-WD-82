@@ -69,6 +69,10 @@ const ticketService = {
 
   /** Fetch all technicians (ADMIN only). */
   getTechnicians: () => api.get("/admin/technicians"),
+
+  /** Submit user rating and feedback for a resolved ticket. */
+  submitFeedback: (id, rating, userFeedback) =>
+    api.put(`/tickets/${id}/feedback`, { rating, userFeedback }),
 };
 
 export default ticketService;
