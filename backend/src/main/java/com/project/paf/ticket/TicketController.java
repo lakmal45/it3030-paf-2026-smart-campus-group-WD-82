@@ -179,7 +179,7 @@ public class TicketController {
      */
     @GetMapping("/{id}/comments")
     public ResponseEntity<org.springframework.data.domain.Page<CommentResponse>> getComments(
-            @PathVariable Long id,
+            @PathVariable @org.springframework.lang.NonNull Long id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(ticketService.getComments(id, page, size));

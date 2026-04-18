@@ -105,7 +105,6 @@ public class TicketServiceTest {
     }
 
     @Test
-    @SuppressWarnings("null")
     void updateTicketStatus_ValidTransition_ShouldSucceed() {
         log.info("Running updateTicketStatus_ValidTransition_ShouldSucceed...");
         UpdateTicketStatusRequest request = new UpdateTicketStatusRequest();
@@ -145,7 +144,6 @@ public class TicketServiceTest {
     }
 
     @Test
-    @SuppressWarnings("null")
     void assignTechnician_ShouldSetStatusToInProgress_WhenCurrentlyOpen() {
         log.info("Running assignTechnician_ShouldSetStatusToInProgress_WhenCurrentlyOpen...");
         
@@ -184,7 +182,6 @@ public class TicketServiceTest {
     }
 
     @Test
-    @SuppressWarnings("null")
     void addComment_ShouldTriggerNotification_WhenCommenterIsNotOwner() {
         log.info("Running addComment_ShouldTriggerNotification_WhenCommenterIsNotOwner...");
         CommentRequest request = new CommentRequest();
