@@ -1,17 +1,21 @@
 package com.project.paf.modules.notification.service;
 
-import jakarta.mail.internet.MimeMessage;
+import java.io.UnsupportedEncodingException;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import com.project.paf.modules.notification.model.EmailTemplates;
-import com.project.paf.modules.user.model.User;
-import com.project.paf.ticket.IncidentTicket;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import com.project.paf.modules.notification.model.EmailTemplates;
+import com.project.paf.modules.user.model.User;
+import com.project.paf.ticket.IncidentTicket;
+
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service responsible for sending all outbound notification emails
@@ -71,7 +75,7 @@ public class EmailService {
             mailSender.send(message);
             log.info("Email sent via SMTP to '{}' | subject: '{}'", to, subject);
 
-        } catch (Exception e) {
+        } catch (UnsupportedEncodingException | MessagingException e) {
             log.error("Unexpected error sending SMTP email to '{}': {}", to, e.getMessage(), e);
         }
     }
