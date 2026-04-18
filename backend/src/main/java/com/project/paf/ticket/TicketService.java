@@ -1,5 +1,7 @@
 package com.project.paf.ticket;
 
+import com.project.paf.modules.auditlog.AuditAction;
+import com.project.paf.modules.auditlog.AuditLogService;
 import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
@@ -40,17 +42,20 @@ public class TicketService {
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final AuditLogService auditLogService;
 
     public TicketService(TicketRepository ticketRepository,
                          TicketCommentRepository commentRepository,
                          FileStorageService fileStorageService,
                          UserRepository userRepository,
-                         EmailService emailService) {
+                         EmailService emailService,
+                         AuditLogService auditLogService) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.auditLogService = auditLogService;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -84,6 +89,11 @@ public class TicketService {
         // Notify all admins and managers
         List<User> adminsAndManagers = userRepository.findByRoleIn(List.of(Role.ADMIN, Role.MANAGER));
         emailService.notifyAdminsAndManagersNewTicket(saved, adminsAndManagers);
+
+        // Audit
+        auditLogService.log(AuditAction.TICKET_CREATED, currentUser,
+                "Ticket #" + saved.getId() + " (" + saved.getCategory() + ") created: " + saved.getLocation(),
+                "Ticket", saved.getId());
 
         return mapToResponse(saved);
     }
@@ -206,6 +216,11 @@ public class TicketService {
         // Notify the ticket creator about the status change
         emailService.notifyStatusChange(updated, current);
 
+        // Audit
+        auditLogService.log(AuditAction.TICKET_STATUS_UPDATED, currentUser,
+                "Ticket #" + id + " status: " + current + " → " + next,
+                "Ticket", id);
+
         return mapToResponse(updated);
     }
 
@@ -246,6 +261,11 @@ public class TicketService {
 
         // Notify technician via email + in-app push (both handled inside notifyTechnicianAssigned)
         emailService.notifyTechnicianAssigned(updated, technician);
+
+        // Audit
+        auditLogService.log(AuditAction.TICKET_ASSIGNED, currentUser,
+                "Ticket #" + ticketId + " assigned to technician '" + technician.getName() + "'",
+                "Ticket", ticketId);
 
         return mapToResponse(updated);
     }
@@ -328,6 +348,11 @@ public class TicketService {
 
         ticketRepository.delete(ticket);
         log.info("Ticket #{} deleted by user '{}'", id, currentUser.getEmail());
+
+        // Audit
+        auditLogService.log(AuditAction.TICKET_DELETED, currentUser,
+                "Ticket #" + id + " permanently deleted",
+                "Ticket", id);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -362,6 +387,11 @@ public class TicketService {
                 && !ticket.getCreatedBy().getId().equals(currentUser.getId())) {
             emailService.notifyCommentAdded(ticket, saved, currentUser);
         }
+
+        // Audit
+        auditLogService.log(AuditAction.TICKET_COMMENT_ADDED, currentUser,
+                "Comment added to Ticket #" + ticketId + " by " + currentUser.getName(),
+                "Ticket", ticketId);
 
         return mapToCommentResponse(saved);
     }

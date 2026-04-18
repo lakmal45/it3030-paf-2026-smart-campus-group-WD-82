@@ -1,5 +1,7 @@
 package com.project.paf.modules.booking.service;
 
+import com.project.paf.modules.auditlog.AuditAction;
+import com.project.paf.modules.auditlog.AuditLogService;
 import com.project.paf.modules.booking.entity.Booking;
 import com.project.paf.modules.booking.entity.BookingStatus;
 import com.project.paf.modules.booking.repository.BookingRepository;
@@ -24,13 +26,16 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final EmailService emailService;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     public BookingService(BookingRepository bookingRepository,
                           EmailService emailService,
-                          UserRepository userRepository) {
+                          UserRepository userRepository,
+                          AuditLogService auditLogService) {
         this.bookingRepository = bookingRepository;
         this.emailService = emailService;
         this.userRepository = userRepository;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -69,6 +74,11 @@ public class BookingService {
         List<User> adminsAndManagers = userRepository.findByRoleIn(
                 Arrays.asList(Role.ADMIN, Role.MANAGER));
         emailService.notifyBookingCreatedToAdmins(saved, adminsAndManagers);
+
+        // Audit
+        auditLogService.log(AuditAction.BOOKING_CREATED, user,
+                "Booking #" + saved.getId() + " for '" + saved.getResource() + "' on " + saved.getDate(),
+                "Booking", saved.getId());
 
         return saved;
     }
@@ -130,6 +140,15 @@ public class BookingService {
             emailService.notifyBookingCancelled(saved, "an administrator");
         }
 
+        // Audit — determine the action from the status change
+        AuditAction updateAction = (saved.getStatus() == BookingStatus.CANCELLED
+                && previousStatus != BookingStatus.CANCELLED)
+                ? AuditAction.BOOKING_CANCELLED
+                : AuditAction.BOOKING_UPDATED;
+        auditLogService.log(updateAction, null,
+                "Booking #" + saved.getId() + " for '" + saved.getResource() + "' → " + saved.getStatus(),
+                "Booking", saved.getId());
+
         return saved;
     }
 
@@ -142,6 +161,9 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
         }
         bookingRepository.deleteById(id);
+        auditLogService.log(AuditAction.BOOKING_DELETED, null,
+                "Booking #" + id + " permanently deleted",
+                "Booking", id);
     }
 
     /**
@@ -157,6 +179,11 @@ public class BookingService {
 
         // Notify the booking owner (async: email + in-app)
         emailService.notifyBookingConfirmed(saved);
+
+        // Audit
+        auditLogService.log(AuditAction.BOOKING_CONFIRMED, null,
+                "Booking #" + saved.getId() + " for '" + saved.getResource() + "' confirmed",
+                "Booking", saved.getId());
 
         return saved;
     }
@@ -179,6 +206,11 @@ public class BookingService {
         // Notify the booking owner (async: email + in-app)
         emailService.notifyBookingCancelled(saved, "you");
 
+        // Audit
+        auditLogService.log(AuditAction.BOOKING_CANCELLED, user,
+                "Booking #" + saved.getId() + " for '" + saved.getResource() + "' cancelled by user",
+                "Booking", saved.getId());
+
         return saved;
     }
 
@@ -195,6 +227,11 @@ public class BookingService {
 
         // Notify the booking owner of rejection (async: email + in-app)
         emailService.notifyBookingCancelled(saved, "an administrator");
+
+        // Audit
+        auditLogService.log(AuditAction.BOOKING_REJECTED, null,
+                "Booking #" + saved.getId() + " for '" + saved.getResource() + "' rejected by admin",
+                "Booking", saved.getId());
 
         return saved;
     }
