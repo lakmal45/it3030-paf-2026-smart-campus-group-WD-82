@@ -33,8 +33,17 @@ const ResourceDetailPage = () => {
   const [isToggling, setIsToggling] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const normalizedRole = user?.role?.toUpperCase() || "";
-  const isAdmin = normalizedRole.includes("ADMIN");
+  // Robust role extraction — handles both string ("ADMIN") and object ({name:"ADMIN"}) formats
+  const getRole = () => {
+    const r = user?.role;
+    if (!r) return "";
+    if (typeof r === "string") return r.toUpperCase();
+    if (typeof r === "object" && r.name) return r.name.toUpperCase();
+    return String(r).toUpperCase();
+  };
+
+  const userRole = getRole();
+  const isAdmin = localStorage.getItem('role') === 'ADMIN' || userRole === 'ADMIN';
   
   // Strict RBAC: Only ADMIN can modify resources (Add/Edit/Delete/Status)
   const canModify = isAdmin;
@@ -210,9 +219,9 @@ const ResourceDetailPage = () => {
                 <div className="bg-emerald-500 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-lg shadow-emerald-100 flex-shrink-0">
                   <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
-                <div>
-                  <h4 className="text-[9px] sm:text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Operating Hours</h4>
-                  <p className="text-slate-900 font-bold text-sm sm:text-base lg:text-lg leading-tight">{resource.availabilityWindows || "24/7 Availability"}</p>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Availability</span>
+                  <span className="text-slate-900 font-bold text-sm sm:text-base lg:text-lg leading-tight">{resource.availabilityWindows || "Mon-Fri 8AM-5PM"}</span>
                 </div>
               </div>
             </section>
@@ -240,10 +249,17 @@ const ResourceDetailPage = () => {
               <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex items-center font-black text-base sm:text-lg transition-all gap-3 ${resource.available ? 'bg-emerald-600 text-white shadow-lg sm:shadow-xl shadow-emerald-100' : 'bg-slate-200 text-slate-500'}`}>
                 {resource.available ? (
                   <div className="flex items-center w-full gap-3">
-                    <div className="bg-white/20 p-2 rounded-full flex-shrink-0">
-                      <div className="w-2.5 h-2.5 bg-white rounded-full animate-ping"></div>
+                    <div className="flex flex-col">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                      <div className={`px-3 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1.5 ${
+                        resource.status === 'ACTIVE' 
+                          ? 'bg-emerald-50 text-emerald-600' 
+                          : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${resource.status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
+                        {resource.status}
+                      </div>
                     </div>
-                    <span className="text-sm sm:text-base">READY FOR USE</span>
                   </div>
                 ) : (
                   <div className="flex items-center w-full gap-3">

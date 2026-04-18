@@ -37,9 +37,18 @@ const ResourceFormPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const normalizedRole = user?.role?.toUpperCase() || "";
-  const isAdmin = normalizedRole.includes("ADMIN");
-  const isManager = normalizedRole.includes("MANAGER");
+  // Robust role extraction — handles both string ("ADMIN") and object ({name:"ADMIN"}) formats
+  const getRole = () => {
+    const r = user?.role;
+    if (!r) return "";
+    if (typeof r === "string") return r.toUpperCase();
+    if (typeof r === "object" && r.name) return r.name.toUpperCase();
+    return String(r).toUpperCase();
+  };
+
+  const userRole = getRole();
+  const isAdmin = localStorage.getItem('role') === 'ADMIN' || userRole === 'ADMIN';
+  const isManager = userRole === "MANAGER";
   const isAuthorized = isAdmin;
 
   useEffect(() => {
@@ -175,7 +184,7 @@ const ResourceFormPage = () => {
             
             <div className="space-y-6">
               <div>
-                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-2">Resource Title *</label>
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-2">Resource Name *</label>
                 <input
                   type="text"
                   name="name"
@@ -212,7 +221,7 @@ const ResourceFormPage = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
               <div>
-                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-2">Physical Location *</label>
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-2">Location *</label>
                 <input
                   type="text"
                   name="location"
@@ -227,7 +236,7 @@ const ResourceFormPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-2">Maximum Capacity *</label>
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-2">Capacity *</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -249,11 +258,8 @@ const ResourceFormPage = () => {
           {/* Availability Windows */}
           <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 space-y-6 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2 sm:gap-3">
-              <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600 flex-shrink-0" /> Operating Schedule
-            </h2>
             <div>
-              <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-2">Availability Windows</label>
+              <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-2">Availability *</label>
               <input
                 type="text"
                 name="availabilityWindows"
@@ -284,11 +290,10 @@ const ResourceFormPage = () => {
                   className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-slate-200 transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:outline-none appearance-none bg-no-repeat bg-[right_1.25rem_center] font-bold text-slate-900 text-sm"
                   style={{ backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E')" }}
                 >
-                  <option value="Room">Lecture Room</option>
-                  <option value="Lab">Scientific Lab</option>
-                  <option value="Equipment">Tangible Equipment</option>
-                  <option value="Lecture Hall">Theatre / Hall</option>
-                  <option value="Auditorium">Auditorium</option>
+                  <option value="ROOM">ROOM</option>
+                  <option value="LAB">LAB</option>
+                  <option value="HALL">HALL</option>
+                  <option value="EQUIPMENT">EQUIPMENT</option>
                 </select>
               </div>
 
@@ -301,11 +306,8 @@ const ResourceFormPage = () => {
                   className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-slate-200 transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:outline-none appearance-none bg-no-repeat bg-[right_1.25rem_center] font-bold text-slate-900 text-sm"
                   style={{ backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E')" }}
                 >
-                  <option value="ACTIVE text-emerald-600">Active</option>
-                  <option value="IN_MAINTENANCE">Maintenance</option>
-                  <option value="OUT_OF_SERVICE">Out of Service</option>
-                  <option value="UNDER_REPAIR">Under Repair</option>
-                  <option value="RETIRED">Retired</option>
+                  <option value="ACTIVE text-emerald-600">ACTIVE</option>
+                  <option value="OUT_OF_SERVICE">OUT OF SERVICE</option>
                 </select>
               </div>
 
@@ -341,7 +343,7 @@ const ResourceFormPage = () => {
               ) : (
                 <>
                   <Save className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                  {isEditMode ? "Update Resource" : "Create Asset"}
+                  Save
                 </>
               )}
             </button>

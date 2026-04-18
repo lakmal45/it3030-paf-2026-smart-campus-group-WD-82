@@ -59,11 +59,10 @@ const ResourceFilters = ({ onSearch }) => {
               className="w-full pl-5 pr-12 py-3 border border-slate-200 bg-slate-50/30 rounded-2xl transition-all focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:bg-white focus:outline-none font-semibold text-slate-700 appearance-none cursor-pointer shadow-sm"
             >
               <option value="">All Types</option>
-              <option value="Room">Lecture Room</option>
-              <option value="Lab">Scientific Lab</option>
-              <option value="Equipment">Tangible Equipment</option>
-              <option value="Lecture Hall">Theatre / Hall</option>
-              <option value="Auditorium">Auditorium</option>
+              <option value="ROOM">ROOM</option>
+              <option value="LAB">LAB</option>
+              <option value="HALL">HALL</option>
+              <option value="EQUIPMENT">EQUIPMENT</option>
             </select>
             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
               <RotateCcw className="h-4 w-4 rotate-90" />

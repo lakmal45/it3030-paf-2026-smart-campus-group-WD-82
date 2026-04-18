@@ -10,14 +10,15 @@ import {
   Table, 
   LayoutGrid, 
   Eye, 
-  Edit, 
+  Pencil, 
   Trash2, 
   CheckCircle2, 
   Clock, 
   AlertTriangle,
   Building2,
   FilterX,
-  MapPin
+  MapPin,
+  ToggleRight
 } from "lucide-react";
 
 const ResourceListPage = () => {
@@ -34,18 +35,27 @@ const ResourceListPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [resourceToDelete, setResourceToDelete] = useState(null);
 
+  // Robust role extraction — handles both string ("ADMIN") and object ({name:"ADMIN"}) formats
+  const getRole = () => {
+    const r = user?.role;
+    if (!r) return "";
+    if (typeof r === "string") return r.toUpperCase();
+    if (typeof r === "object" && r.name) return r.name.toUpperCase();
+    return String(r).toUpperCase();
+  };
+
+  const userRole = getRole();
+  const isAdmin = localStorage.getItem('role') === 'ADMIN' || userRole === 'ADMIN';
+
   // Determine base dashboard path based on role
   const getDashboardPath = () => {
-    const role = user?.role?.toLowerCase();
-    if (role?.includes("admin")) return "/dashboard/admin";
-    if (role?.includes("manager")) return "/dashboard/manager";
+    if (userRole === "ADMIN" || isAdmin) return "/dashboard/admin";
+    if (userRole === "MANAGER") return "/dashboard/manager";
     return "/dashboard/user";
   };
 
   const dashboardPath = getDashboardPath();
-  const normalizedRole = user?.role?.toUpperCase() || "";
-  const isAdmin = normalizedRole.includes("ADMIN");
-  
+
   // Strict RBAC: Only ADMIN can modify resources (Add/Edit/Delete/Status)
   const canModify = isAdmin;
 
@@ -94,6 +104,19 @@ const ResourceListPage = () => {
     } finally {
       setShowDeleteModal(false);
       setResourceToDelete(null);
+    }
+  };
+  
+  const handleStatusToggle = async (e, resource) => {
+    e.stopPropagation();
+    const newStatus = resource.status === "ACTIVE" ? "OUT_OF_SERVICE" : "ACTIVE";
+    try {
+      await resourceService.updateResourceStatus(resource.id, newStatus);
+      showToast(`Status updated to ${newStatus.replace(/_/g, ' ')}`, "success");
+      fetchResources();
+    } catch (err) {
+      console.error("Status update error:", err);
+      showToast("Failed to update status", "error");
     }
   };
 
@@ -230,16 +253,26 @@ const ResourceListPage = () => {
                 </div>
 
                 {canModify && (
-                  <div className="flex justify-end space-x-3 opacity-0 group-hover:opacity-100 transition-all">
+                  <div className="flex justify-end items-center space-x-3 opacity-0 group-hover:opacity-100 transition-all">
+                    {/* Compact Status Toggle for cards */}
+                    <button
+                      onClick={(e) => handleStatusToggle(e, resource)}
+                      className={`p-2 rounded-lg transition-colors ${resource.status === 'ACTIVE' ? 'text-emerald-500 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-400 bg-slate-50 hover:bg-slate-100'}`}
+                      title="Toggle Status"
+                    >
+                      <ToggleRight className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={(e) => handleEditClick(e, resource.id)}
                       className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all active:scale-90"
+                      title="Edit Resource"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       onClick={(e) => handleDeleteClick(e, resource)}
                       className="p-3 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-90"
+                      title="Delete Resource"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -300,32 +333,44 @@ const ResourceListPage = () => {
                       )}
                     </td>
                     <td className="px-8 py-6 whitespace-nowrap text-right space-x-2">
-                      <button
+                       <button
                         onClick={(e) => { e.stopPropagation(); handleRowClick(resource.id); }}
                         className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all active:scale-90"
-                        title="View Full Profile"
+                        title="view"
                       >
                         <Eye className="h-5 w-5" />
                       </button>
-                      {canModify && (
+                      {isAdmin && (
                         <>
                           <button
                             onClick={(e) => handleEditClick(e, resource.id)}
                             className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-90"
-                            title="Edit Record"
+                            title="edit"
                           >
-                            <Edit className="h-5 w-5" />
+                            <Pencil className="h-5 w-5" />
                           </button>
+                          
+                          <div className="inline-flex items-center align-middle mx-1" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={(e) => handleStatusToggle(e, resource)}
+                              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${resource.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                              title={resource.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                            >
+                              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${resource.status === 'ACTIVE' ? 'translate-x-5' : 'translate-x-0'}`} />
+                            </button>
+                          </div>
+
                           <button
                             onClick={(e) => handleDeleteClick(e, resource)}
                             className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all active:scale-90"
-                            title="Purge Entry"
+                            title="delete"
                           >
                             <Trash2 className="h-5 w-5" />
                           </button>
                         </>
                       )}
                     </td>
+
                   </tr>
                 ))}
               </tbody>
