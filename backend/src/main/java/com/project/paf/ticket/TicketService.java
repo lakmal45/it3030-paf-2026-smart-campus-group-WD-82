@@ -4,7 +4,6 @@ import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
-import com.project.paf.modules.notification.service.AppNotificationService;
 import com.project.paf.modules.notification.service.EmailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -41,20 +40,17 @@ public class TicketService {
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
     private final EmailService emailService;
-    private final AppNotificationService appNotificationService;
 
     public TicketService(TicketRepository ticketRepository,
                          TicketCommentRepository commentRepository,
                          FileStorageService fileStorageService,
                          UserRepository userRepository,
-                         EmailService emailService,
-                         AppNotificationService appNotificationService) {
+                         EmailService emailService) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
         this.emailService = emailService;
-        this.appNotificationService = appNotificationService;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -248,12 +244,8 @@ public class TicketService {
         log.info("Ticket #{} assigned to technician '{}' by admin '{}'",
                 ticketId, technician.getEmail(), currentUser.getEmail());
 
-        appNotificationService.createNotification(
-            technician,
-            "Ticket Assigned",
-            "You have been assigned to ticket #" + ticket.getId(),
-            "info"
-        );
+        // Notify technician via email + in-app push (both handled inside notifyTechnicianAssigned)
+        emailService.notifyTechnicianAssigned(updated, technician);
 
         return mapToResponse(updated);
     }
@@ -283,6 +275,35 @@ public class TicketService {
 
         IncidentTicket updated = ticketRepository.save(ticket);
         log.info("Added {} image(s) to ticket #{}", files.size(), ticketId);
+        return mapToResponse(updated);
+    }
+
+    /**
+     * Submits a rating and optional feedback for a resolved or closed ticket.
+     * Only the ticket creator is allowed to provide feedback.
+     *
+     * @param id          ticket to rate
+     * @param request     rating and feedback text
+     * @param currentUser authenticated caller
+     * @return updated ticket
+     */
+    public TicketResponse submitFeedback(Long id, SubmitFeedbackRequest request, User currentUser) {
+        IncidentTicket ticket = findTicketOrThrow(id);
+
+        boolean isCreator = ticket.getCreatedBy() != null && Objects.equals(ticket.getCreatedBy().getId(), currentUser.getId());
+        if (!isCreator) {
+            throw new AccessDeniedException("Only the person who submitted the ticket can provide feedback.");
+        }
+
+        if (ticket.getStatus() != TicketStatus.RESOLVED && ticket.getStatus() != TicketStatus.CLOSED) {
+            throw new IllegalStateException("Feedback can only be provided for RESOLVED or CLOSED tickets.");
+        }
+
+        ticket.setRating(request.getRating());
+        ticket.setUserFeedback(request.getUserFeedback());
+
+        IncidentTicket updated = ticketRepository.save(ticket);
+        log.info("Feedback received for ticket #{} from user '{}'", id, currentUser.getEmail());
         return mapToResponse(updated);
     }
 
@@ -467,6 +488,8 @@ public class TicketService {
         response.setResourceId(ticket.getResourceId());
         response.setCreatedAt(ticket.getCreatedAt());
         response.setUpdatedAt(ticket.getUpdatedAt());
+        response.setRating(ticket.getRating());
+        response.setUserFeedback(ticket.getUserFeedback());
 
         if (ticket.getCreatedBy() != null) {
             response.setCreatedByName(ticket.getCreatedBy().getName());
