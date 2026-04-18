@@ -39,6 +39,9 @@ public class TicketResponse {
     /** ID of the assigned technician, or null. */
     private Long assignedTechnicianId;
 
+    private Integer rating;
+    private String userFeedback;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

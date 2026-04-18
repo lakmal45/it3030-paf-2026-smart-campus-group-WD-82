@@ -286,6 +286,35 @@ public class TicketService {
     }
 
     /**
+     * Submits a rating and optional feedback for a resolved or closed ticket.
+     * Only the ticket creator is allowed to provide feedback.
+     *
+     * @param id          ticket to rate
+     * @param request     rating and feedback text
+     * @param currentUser authenticated caller
+     * @return updated ticket
+     */
+    public TicketResponse submitFeedback(Long id, SubmitFeedbackRequest request, User currentUser) {
+        IncidentTicket ticket = findTicketOrThrow(id);
+
+        boolean isCreator = ticket.getCreatedBy() != null && Objects.equals(ticket.getCreatedBy().getId(), currentUser.getId());
+        if (!isCreator) {
+            throw new AccessDeniedException("Only the person who submitted the ticket can provide feedback.");
+        }
+
+        if (ticket.getStatus() != TicketStatus.RESOLVED && ticket.getStatus() != TicketStatus.CLOSED) {
+            throw new IllegalStateException("Feedback can only be provided for RESOLVED or CLOSED tickets.");
+        }
+
+        ticket.setRating(request.getRating());
+        ticket.setUserFeedback(request.getUserFeedback());
+
+        IncidentTicket updated = ticketRepository.save(ticket);
+        log.info("Feedback received for ticket #{} from user '{}'", id, currentUser.getEmail());
+        return mapToResponse(updated);
+    }
+
+    /**
      * Hard-deletes a ticket. Only ADMIN users may call this method.
      *
      * @param id          ticket to delete
@@ -466,6 +495,8 @@ public class TicketService {
         response.setResourceId(ticket.getResourceId());
         response.setCreatedAt(ticket.getCreatedAt());
         response.setUpdatedAt(ticket.getUpdatedAt());
+        response.setRating(ticket.getRating());
+        response.setUserFeedback(ticket.getUserFeedback());
 
         if (ticket.getCreatedBy() != null) {
             response.setCreatedByName(ticket.getCreatedBy().getName());
