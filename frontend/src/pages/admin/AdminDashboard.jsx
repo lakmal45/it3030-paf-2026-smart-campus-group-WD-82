@@ -133,11 +133,11 @@ const UserRowSkeleton = () => (
 );
 
 const ActivitySkeleton = () => (
-  <div className="flex gap-3">
-    <div className="skeleton-shimmer w-2 h-2 rounded-full mt-2 flex-shrink-0" />
-    <div className="flex-1 space-y-2">
-      <div className="skeleton-shimmer h-3 w-full" />
-      <div className="skeleton-shimmer h-3 w-1/2" />
+  <div className="flex gap-4 p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
+    <div className="skeleton-shimmer w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0" />
+    <div className="flex-1 space-y-3 mt-1">
+      <div className="skeleton-shimmer h-3 w-full rounded" />
+      <div className="skeleton-shimmer h-3 w-2/3 rounded" />
     </div>
   </div>
 );
@@ -353,29 +353,7 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Full Activity Feed (Move here or keep layout) */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h2 className="text-xl font-semibold text-slate-800 mb-6 font-display">Recent Activity</h2>
-          <div className="space-y-5">
-            {refreshing ? (
-              <> <ActivitySkeleton /> <ActivitySkeleton /> <ActivitySkeleton /> <ActivitySkeleton /> </>
-            ) : recentActivity.length === 0 ? (
-              <p className="text-sm text-slate-400 py-6 text-center">No recent activity</p>
-            ) : (
-              recentActivity.map((notif, idx) => (
-                <div key={notif.id} className={`flex gap-3 animate-card-enter stagger-${Math.min(idx + 1, 6)}`}>
-                  <div className={`flex-shrink-0 w-2 h-2 mt-2 rounded-full ${dotColors[idx % dotColors.length]}`} />
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">{notif.message}</p>
-                    <p className="text-xs text-slate-400 mt-1">{timeAgo(notif.createdAt)}</p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
+
 
       {/* ── Role Breakdown + Recent Users ───────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -453,6 +431,34 @@ const AdminDashboard = () => {
           >
             Manage All Users →
           </button>
+        </div>
+      </div>
+
+      {/* ── Recent Activity (below role/users) ──────────────────────── */}
+      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-100 animate-card-enter stagger-6 mt-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-slate-800">Recent Activity</h2>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{recentActivity.length} Events</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {refreshing ? (
+            <> <ActivitySkeleton /> <ActivitySkeleton /> <ActivitySkeleton /> <ActivitySkeleton /> <ActivitySkeleton /> </>
+          ) : recentActivity.length === 0 ? (
+            <p className="text-sm text-slate-400 py-8 text-center col-span-full">No recent activity</p>
+          ) : (
+            recentActivity.map((notif, idx) => (
+              <div key={notif.id} className={`flex items-start gap-4 p-4 rounded-2xl border border-slate-100 hover:border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-all animate-card-enter stagger-${Math.min(idx + 1, 6)}`}>
+                <div className={`flex-shrink-0 w-2.5 h-2.5 mt-1.5 rounded-full ${dotColors[idx % dotColors.length]} shadow-sm`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 leading-snug break-words">{notif.message}</p>
+                  <p className="text-xs font-medium text-slate-400 mt-2 flex items-center gap-1.5">
+                    <Clock size={12} className="opacity-70" />
+                    {timeAgo(notif.createdAt)}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
