@@ -410,4 +410,211 @@ public final class EmailTemplates {
                 comment.getContent()
         );
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Booking — User Confirmation
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Builds the HTML email body sent to the user when they successfully create a booking.
+     *
+     * @param booking    the newly created booking
+     * @param userName   the name of the user who created the booking
+     * @return HTML string
+     */
+    public static String bookingCreatedUser(com.project.paf.modules.booking.entity.Booking booking, String userName) {
+        return """
+                <!DOCTYPE html><html><head>%s</head><body>
+                <div class="wrapper">
+                  <div class="header">
+                    <h1>📅 Booking Request Received</h1>
+                    <p>Smart Campus Resource Booking System</p>
+                  </div>
+                  <div class="body">
+                    <p>Hi <strong>%s</strong>,</p>
+                    <p>Your booking request has been received and is currently <strong>pending review</strong>.
+                       You will be notified once it is confirmed by an administrator.</p>
+                    <div class="ticket-card">
+                      <table>
+                        <tr><td>Booking ID</td><td><strong>#%d</strong></td></tr>
+                        <tr><td>Resource</td><td>%s</td></tr>
+                        <tr><td>Date</td><td>%s</td></tr>
+                        <tr><td>Time</td><td>%s – %s</td></tr>
+                        <tr><td>Reason</td><td>%s</td></tr>
+                        <tr><td>Status</td><td><span class="badge badge-progress">PENDING</span></td></tr>
+                      </table>
+                    </div>
+                    <p>Please log in to the Smart Campus portal to view or cancel your booking.</p>
+                  </div>
+                  <div class="footer">
+                    <p>Smart Campus · IT3030 Project · This is an automated notification — please do not reply.</p>
+                  </div>
+                </div>
+                </body></html>
+                """.formatted(
+                STYLE,
+                userName,
+                booking.getId(),
+                booking.getResource(),
+                booking.getDate(),
+                booking.getStartTime(),
+                booking.getEndTime(),
+                booking.getReason()
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Booking — Admin / Manager Alert
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Builds the HTML email body sent to admins/managers when a new booking is created.
+     *
+     * @param booking  the newly created booking
+     * @param userName the name of the user who created the booking
+     * @return HTML string
+     */
+    public static String adminNewBooking(com.project.paf.modules.booking.entity.Booking booking, String userName) {
+        return """
+                <!DOCTYPE html><html><head>%s</head><body>
+                <div class="wrapper">
+                  <div class="header">
+                    <h1>🗓️ New Booking Request</h1>
+                    <p>Smart Campus Resource Booking System</p>
+                  </div>
+                  <div class="body">
+                    <p>Hello Admin/Manager,</p>
+                    <p>A new resource booking has been submitted by <strong>%s</strong> and is awaiting your approval.</p>
+                    <div class="ticket-card">
+                      <table>
+                        <tr><td>Booking ID</td><td><strong>#%d</strong></td></tr>
+                        <tr><td>Requested By</td><td>%s</td></tr>
+                        <tr><td>Resource</td><td>%s</td></tr>
+                        <tr><td>Date</td><td>%s</td></tr>
+                        <tr><td>Time</td><td>%s – %s</td></tr>
+                        <tr><td>Reason</td><td>%s</td></tr>
+                        <tr><td>Status</td><td><span class="badge badge-progress">PENDING</span></td></tr>
+                      </table>
+                    </div>
+                    <p>Please log in to the Smart Campus portal to review and confirm or reject this booking.</p>
+                  </div>
+                  <div class="footer">
+                    <p>Smart Campus · IT3030 Project · This is an automated notification — please do not reply.</p>
+                  </div>
+                </div>
+                </body></html>
+                """.formatted(
+                STYLE,
+                userName,
+                booking.getId(),
+                userName,
+                booking.getResource(),
+                booking.getDate(),
+                booking.getStartTime(),
+                booking.getEndTime(),
+                booking.getReason()
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Booking — Confirmed
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Builds the HTML email body sent to the user when their booking is confirmed.
+     *
+     * @param booking  the confirmed booking
+     * @param userName the name of the user who owns the booking
+     * @return HTML string
+     */
+    public static String bookingConfirmed(com.project.paf.modules.booking.entity.Booking booking, String userName) {
+        return """
+                <!DOCTYPE html><html><head>%s</head><body>
+                <div class="wrapper">
+                  <div class="header">
+                    <h1>✅ Booking Confirmed</h1>
+                    <p>Smart Campus Resource Booking System</p>
+                  </div>
+                  <div class="body">
+                    <p>Hi <strong>%s</strong>,</p>
+                    <p>Great news! Your booking request has been <strong>confirmed</strong> by the campus administrator.</p>
+                    <div class="ticket-card">
+                      <table>
+                        <tr><td>Booking ID</td><td><strong>#%d</strong></td></tr>
+                        <tr><td>Resource</td><td>%s</td></tr>
+                        <tr><td>Date</td><td>%s</td></tr>
+                        <tr><td>Time</td><td>%s – %s</td></tr>
+                        <tr><td>Reason</td><td>%s</td></tr>
+                        <tr><td>Status</td><td><span class="badge badge-resolved">CONFIRMED</span></td></tr>
+                      </table>
+                    </div>
+                    <p>Please arrive on time and respect campus resource usage guidelines. Thank you!</p>
+                  </div>
+                  <div class="footer">
+                    <p>Smart Campus · IT3030 Project · This is an automated notification — please do not reply.</p>
+                  </div>
+                </div>
+                </body></html>
+                """.formatted(
+                STYLE,
+                userName,
+                booking.getId(),
+                booking.getResource(),
+                booking.getDate(),
+                booking.getStartTime(),
+                booking.getEndTime(),
+                booking.getReason()
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Booking — Cancelled
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Builds the HTML email body sent to the user when their booking is cancelled.
+     *
+     * @param booking       the cancelled booking
+     * @param userName      the name of the user who owns the booking
+     * @param cancelledBy   who cancelled it (e.g., "you" or "an administrator")
+     * @return HTML string
+     */
+    public static String bookingCancelled(com.project.paf.modules.booking.entity.Booking booking, String userName, String cancelledBy) {
+        return """
+                <!DOCTYPE html><html><head>%s</head><body>
+                <div class="wrapper">
+                  <div class="header" style="background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)">
+                    <h1>❌ Booking Cancelled</h1>
+                    <p>Smart Campus Resource Booking System</p>
+                  </div>
+                  <div class="body">
+                    <p>Hi <strong>%s</strong>,</p>
+                    <p>Your booking has been <strong>cancelled</strong> by %s.</p>
+                    <div class="ticket-card" style="border-left-color:#b91c1c;background:#fff5f5;">
+                      <table>
+                        <tr><td>Booking ID</td><td><strong>#%d</strong></td></tr>
+                        <tr><td>Resource</td><td>%s</td></tr>
+                        <tr><td>Date</td><td>%s</td></tr>
+                        <tr><td>Time</td><td>%s – %s</td></tr>
+                        <tr><td>Status</td><td><span class="badge badge-rejected">CANCELLED</span></td></tr>
+                      </table>
+                    </div>
+                    <p>If you believe this was done in error or have any questions, please contact the campus support team.</p>
+                  </div>
+                  <div class="footer">
+                    <p>Smart Campus · IT3030 Project · This is an automated notification — please do not reply.</p>
+                  </div>
+                </div>
+                </body></html>
+                """.formatted(
+                STYLE,
+                userName,
+                cancelledBy,
+                booking.getId(),
+                booking.getResource(),
+                booking.getDate(),
+                booking.getStartTime(),
+                booking.getEndTime()
+        );
+    }
 }

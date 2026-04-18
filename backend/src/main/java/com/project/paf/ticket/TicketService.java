@@ -248,12 +248,8 @@ public class TicketService {
         log.info("Ticket #{} assigned to technician '{}' by admin '{}'",
                 ticketId, technician.getEmail(), currentUser.getEmail());
 
-        appNotificationService.createNotification(
-            technician,
-            "Ticket Assigned",
-            "You have been assigned to ticket #" + ticket.getId(),
-            "info"
-        );
+        // Notify technician via email + in-app push (both handled inside notifyTechnicianAssigned)
+        emailService.notifyTechnicianAssigned(updated, technician);
 
         return mapToResponse(updated);
     }

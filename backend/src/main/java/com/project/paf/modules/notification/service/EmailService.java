@@ -63,10 +63,10 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(java.util.Objects.requireNonNull(fromAddress), java.util.Objects.requireNonNull(fromName));
-            helper.setTo(java.util.Objects.requireNonNull(to));
-            helper.setSubject(java.util.Objects.requireNonNull(subject));
-            helper.setText(java.util.Objects.requireNonNull(htmlContent), true);
+            helper.setFrom(fromAddress, fromName);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
 
             mailSender.send(message);
             log.info("Email sent via SMTP to '{}' | subject: '{}'", to, subject);
@@ -268,5 +268,138 @@ public class EmailService {
         String html    = EmailTemplates.commentAdded(ticket, comment, commenter);
         sendHtmlEmail(to, name, subject, html);
         log.info("Comment-added notification queued for '{}' (ticket #{})", to, ticket.getId());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Booking event notifications
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Notifies the booking creator that their booking request has been received.
+     *
+     * @param booking the newly created {@link com.project.paf.modules.booking.entity.Booking}
+     */
+    @Async("emailTaskExecutor")
+    public void notifyBookingCreatedToUser(com.project.paf.modules.booking.entity.Booking booking) {
+        User user = booking.getUser();
+        if (user == null || user.getEmail() == null) {
+            log.warn("Cannot send booking-created email: no user email for booking #{}", booking.getId());
+            return;
+        }
+
+        // Create in-app notification (always)
+        appNotificationService.createNotification(user,
+            "Booking Request Received",
+            "Your booking request #" + booking.getId() + " for " + booking.getResource() + " has been received and is pending review.",
+            "info");
+
+        // Only send email if user has email notifications enabled
+        if (!user.isEmailNotificationsEnabled()) {
+            log.info("Email notifications disabled for '{}'; skipping booking-created email", user.getEmail());
+            return;
+        }
+        String to      = user.getEmail();
+        String name    = user.getName();
+        String subject = "📅 Booking #" + booking.getId() + " Request Received — Smart Campus";
+        String html    = EmailTemplates.bookingCreatedUser(booking, name);
+        sendHtmlEmail(to, name, subject, html);
+        log.info("Booking-created notification queued for '{}'", to);
+    }
+
+    /**
+     * Notifies all admins and managers when a new booking is submitted.
+     *
+     * @param booking           the newly created booking
+     * @param adminsAndManagers the list of User entities with ADMIN or MANAGER roles
+     */
+    @Async("emailTaskExecutor")
+    public void notifyBookingCreatedToAdmins(com.project.paf.modules.booking.entity.Booking booking, List<User> adminsAndManagers) {
+        String userName = booking.getUser() != null ? booking.getUser().getName() : "Unknown User";
+        for (User user : adminsAndManagers) {
+            if (user.getEmail() == null) continue;
+
+            // Create in-app notification (always, regardless of email preference)
+            appNotificationService.createNotification(user,
+                "New Booking Request",
+                "A new booking request #" + booking.getId() + " has been submitted by " + userName + " for " + booking.getResource() + ".",
+                "alert");
+
+            // Only send email if this admin/manager has email notifications enabled
+            if (!user.isEmailNotificationsEnabled()) {
+                log.info("Email notifications disabled for '{}'; skipping new-booking admin email", user.getEmail());
+                continue;
+            }
+            String to      = user.getEmail();
+            String name    = user.getName();
+            String subject = "🗓️ New Booking #" + booking.getId() + " Request — Smart Campus";
+            String html    = EmailTemplates.adminNewBooking(booking, userName);
+            sendHtmlEmail(to, name, subject, html);
+            log.info("New booking notification queued for admin/manager '{}'", to);
+        }
+    }
+
+    /**
+     * Notifies the booking creator that their booking has been confirmed.
+     *
+     * @param booking the confirmed {@link com.project.paf.modules.booking.entity.Booking}
+     */
+    @Async("emailTaskExecutor")
+    public void notifyBookingConfirmed(com.project.paf.modules.booking.entity.Booking booking) {
+        User user = booking.getUser();
+        if (user == null || user.getEmail() == null) {
+            log.warn("Cannot send booking-confirmed email: no user email for booking #{}", booking.getId());
+            return;
+        }
+
+        // Create in-app notification (always)
+        appNotificationService.createNotification(user,
+            "Booking Confirmed ✅",
+            "Your booking #" + booking.getId() + " for " + booking.getResource() + " on " + booking.getDate() + " has been confirmed.",
+            "success");
+
+        // Only send email if user has email notifications enabled
+        if (!user.isEmailNotificationsEnabled()) {
+            log.info("Email notifications disabled for '{}'; skipping booking-confirmed email", user.getEmail());
+            return;
+        }
+        String to      = user.getEmail();
+        String name    = user.getName();
+        String subject = "✅ Booking #" + booking.getId() + " Confirmed — Smart Campus";
+        String html    = EmailTemplates.bookingConfirmed(booking, name);
+        sendHtmlEmail(to, name, subject, html);
+        log.info("Booking-confirmed notification queued for '{}'", to);
+    }
+
+    /**
+     * Notifies the booking creator that their booking has been cancelled.
+     *
+     * @param booking     the cancelled {@link com.project.paf.modules.booking.entity.Booking}
+     * @param cancelledBy a human-readable description of who cancelled it (e.g., "you" or "an administrator")
+     */
+    @Async("emailTaskExecutor")
+    public void notifyBookingCancelled(com.project.paf.modules.booking.entity.Booking booking, String cancelledBy) {
+        User user = booking.getUser();
+        if (user == null || user.getEmail() == null) {
+            log.warn("Cannot send booking-cancelled email: no user email for booking #{}", booking.getId());
+            return;
+        }
+
+        // Create in-app notification (always)
+        appNotificationService.createNotification(user,
+            "Booking Cancelled",
+            "Your booking #" + booking.getId() + " for " + booking.getResource() + " has been cancelled by " + cancelledBy + ".",
+            "warning");
+
+        // Only send email if user has email notifications enabled
+        if (!user.isEmailNotificationsEnabled()) {
+            log.info("Email notifications disabled for '{}'; skipping booking-cancelled email", user.getEmail());
+            return;
+        }
+        String to      = user.getEmail();
+        String name    = user.getName();
+        String subject = "❌ Booking #" + booking.getId() + " Cancelled — Smart Campus";
+        String html    = EmailTemplates.bookingCancelled(booking, name, cancelledBy);
+        sendHtmlEmail(to, name, subject, html);
+        log.info("Booking-cancelled notification queued for '{}'", to);
     }
 }
