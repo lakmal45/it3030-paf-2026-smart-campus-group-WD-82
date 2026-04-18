@@ -72,15 +72,18 @@ public class TicketController {
      * ADMIN/TECHNICIAN: all tickets. USER: own tickets only.
      */
     @GetMapping
-    public ResponseEntity<List<TicketResponse>> getAllTickets(
+    public ResponseEntity<org.springframework.data.domain.Page<TicketResponse>> getAllTickets(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String priority,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
         User currentUser = resolveUser(session, emailHeader);
-        return ResponseEntity.ok(ticketService.getAllTickets(status, category, priority, currentUser));
+        return ResponseEntity.ok(ticketService.getAllTickets(status, category, priority, keyword, page, size, currentUser));
     }
 
     /**
@@ -174,8 +177,11 @@ public class TicketController {
      * GET /api/tickets/{id}/comments — List all comments for a ticket.
      */
     @GetMapping("/{id}/comments")
-    public ResponseEntity<List<CommentResponse>> getComments(@PathVariable Long id) {
-        return ResponseEntity.ok(ticketService.getComments(id));
+    public ResponseEntity<org.springframework.data.domain.Page<CommentResponse>> getComments(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ticketService.getComments(id, page, size));
     }
 
     /**

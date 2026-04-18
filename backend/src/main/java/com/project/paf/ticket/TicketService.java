@@ -6,6 +6,10 @@ import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
 import com.smartcampus.notification.NotificationService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,7 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Objects;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Business-logic service for the Maintenance & Incident Ticketing System.
@@ -123,59 +126,33 @@ public class TicketService {
     }
 
     /**
-     * Returns tickets visible to the current user.
-     *
-     * <ul>
-     *   <li>ADMIN / TECHNICIAN → all tickets (with optional status filter).</li>
-     *   <li>USER → only their own tickets (with optional status filter).</li>
-     * </ul>
+     * Returns tickets visible to the current user with pagination and database-level filtering.
      *
      * @param statusFilter   optional status string to filter by
      * @param categoryFilter optional category string to filter by
      * @param priorityFilter optional priority string to filter by
+     * @param page           page number (0-indexed)
+     * @param size           page size
      * @param currentUser    the authenticated caller
-     * @return list of {@link TicketResponse}
+     * @return a page of {@link TicketResponse}
      */
     @Transactional(readOnly = true)
-    public List<TicketResponse> getAllTickets(String statusFilter, String categoryFilter, String priorityFilter, User currentUser) {
+    public Page<TicketResponse> getAllTickets(String statusFilter, String categoryFilter, String priorityFilter, String keyword, int page, int size, User currentUser) {
         boolean isAdminOrManager = currentUser.getRole() == Role.ADMIN
                 || currentUser.getRole() == Role.MANAGER;
         boolean isTechnician = currentUser.getRole() == Role.TECHNICIAN;
 
-        List<IncidentTicket> tickets;
+        TicketStatus status = (statusFilter != null && !statusFilter.isBlank()) ? parseStatus(statusFilter) : null;
+        User creator = (!isAdminOrManager && !isTechnician) ? currentUser : null;
+        User technician = isTechnician ? currentUser : null;
 
-        if (statusFilter != null && !statusFilter.isBlank()) {
-            TicketStatus status = parseStatus(statusFilter);
-            if (isAdminOrManager) {
-                tickets = ticketRepository.findByStatus(status);
-            } else if (isTechnician) {
-                tickets = ticketRepository.findByAssignedTechnicianAndStatus(currentUser, status);
-            } else {
-                tickets = ticketRepository.findByCreatedByAndStatus(currentUser, status);
-            }
-        } else {
-            if (isAdminOrManager) {
-                tickets = ticketRepository.findAll();
-            } else if (isTechnician) {
-                tickets = ticketRepository.findByAssignedTechnician(currentUser);
-            } else {
-                tickets = ticketRepository.findByCreatedBy(currentUser);
-            }
-        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        if (categoryFilter != null && !categoryFilter.isBlank()) {
-            tickets = tickets.stream()
-                             .filter(t -> t.getCategory().equalsIgnoreCase(categoryFilter))
-                             .collect(Collectors.toList());
-        }
+        Page<IncidentTicket> ticketPage = ticketRepository.findAllWithFilters(
+                status, categoryFilter, priorityFilter, creator, technician, keyword, pageable
+        );
 
-        if (priorityFilter != null && !priorityFilter.isBlank()) {
-            tickets = tickets.stream()
-                             .filter(t -> t.getPriority().equalsIgnoreCase(priorityFilter))
-                             .collect(Collectors.toList());
-        }
-
-        return tickets.stream().map(this::mapToResponse).collect(Collectors.toList());
+        return ticketPage.map(this::mapToResponse);
     }
 
     /**
@@ -395,12 +372,11 @@ public class TicketService {
      * @return list of {@link CommentResponse}
      */
     @Transactional(readOnly = true)
-    public List<CommentResponse> getComments(Long ticketId) {
+    public org.springframework.data.domain.Page<CommentResponse> getComments(Long ticketId, int page, int size) {
         IncidentTicket ticket = findTicketOrThrow(ticketId);
-        return commentRepository.findByTicketOrderByCreatedAtAsc(ticket)
-                .stream()
-                .map(this::mapToCommentResponse)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").ascending());
+        return commentRepository.findByTicket(ticket, pageable)
+                .map(this::mapToCommentResponse);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

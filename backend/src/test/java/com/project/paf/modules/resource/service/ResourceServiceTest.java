@@ -24,7 +24,6 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ResourceService Unit Tests")
-@SuppressWarnings("null")
 class ResourceServiceTest {
 
     @Mock

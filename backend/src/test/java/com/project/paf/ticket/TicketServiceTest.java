@@ -77,7 +77,6 @@ public class TicketServiceTest {
     }
 
     @Test
-    @SuppressWarnings("null")
     void createTicket_ShouldSetStatusToOpen() {
         log.info("Running createTicket_ShouldSetStatusToOpen...");
         CreateTicketRequest request = new CreateTicketRequest();
@@ -99,7 +98,6 @@ public class TicketServiceTest {
     }
 
     @Test
-    @SuppressWarnings("null")
     void updateTicketStatus_ValidTransition_ShouldSucceed() {
         log.info("Running updateTicketStatus_ValidTransition_ShouldSucceed...");
         UpdateTicketStatusRequest request = new UpdateTicketStatusRequest();
@@ -116,7 +114,6 @@ public class TicketServiceTest {
     }
 
     @Test
-    @SuppressWarnings("null")
     void updateTicketStatus_InvalidTransition_ShouldThrowIllegalStateException() {
         log.info("Running updateTicketStatus_InvalidTransition_ShouldThrowIllegalStateException...");
         openTicket.setStatus(TicketStatus.CLOSED);
@@ -140,7 +137,6 @@ public class TicketServiceTest {
     }
 
     @Test
-    @SuppressWarnings("null")
     void assignTechnician_ShouldSetStatusToInProgress_WhenCurrentlyOpen() {
         log.info("Running assignTechnician_ShouldSetStatusToInProgress_WhenCurrentlyOpen...");
         
@@ -179,7 +175,6 @@ public class TicketServiceTest {
     }
 
     @Test
-    @SuppressWarnings("null")
     void addComment_ShouldTriggerNotification_WhenCommenterIsNotOwner() {
         log.info("Running addComment_ShouldTriggerNotification_WhenCommenterIsNotOwner...");
         CommentRequest request = new CommentRequest();

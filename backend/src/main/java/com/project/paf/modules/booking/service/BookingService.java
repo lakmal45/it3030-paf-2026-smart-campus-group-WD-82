@@ -15,7 +15,6 @@ import java.util.List;
 
 @Service
 @Transactional
-@SuppressWarnings("null")
 public class BookingService {
 
     private final BookingRepository bookingRepository;
