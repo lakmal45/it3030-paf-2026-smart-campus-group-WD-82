@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ticketService from "../../services/ticketService";
 import { useAuth } from "../../context/AuthContext";
 import StatusBadge from "./StatusBadge";
 import CommentSection from "./CommentSection";
 import { ArrowLeft, Clock, MapPin, User, Tag, Key, CheckCircle2, AlertCircle, Wrench, Calendar, Trash2, Image as ImageIcon, Pencil } from "lucide-react";
+
+/**
+ * Simple in-memory cache for ticket details to provide instant loading on return.
+ */
+const detailsCache = {};
 
 /**
  * Renders full ticket details. Used by User, Admin, and Technician.
@@ -15,8 +20,8 @@ const TicketDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  const [ticket, setTicket] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [ticket, setTicket] = useState(detailsCache[id] || null);
+  const [isLoading, setIsLoading] = useState(!detailsCache[id]);
   const [error, setError] = useState(null);
   
   // Status update state
@@ -30,20 +35,21 @@ const TicketDetail = () => {
   const [isAssigning, setIsAssigning] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchTicket = async () => {
+  const fetchTicket = useCallback(async () => {
     try {
       const { data } = await ticketService.getById(id);
       setTicket(data);
       setNewStatus(data.status);
+      detailsCache[id] = data; // Update cache
     } catch (err) {
       console.error(err);
       setError("Failed to load ticket details.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
 
-  const fetchTechnicians = async () => {
+  const fetchTechnicians = useCallback(async () => {
     if (user?.role !== "ADMIN") return;
     try {
       const { data } = await ticketService.getTechnicians();
@@ -51,12 +57,12 @@ const TicketDetail = () => {
     } catch (err) {
       console.error("Failed to load technicians", err);
     }
-  };
+  }, [user?.role]);
 
   useEffect(() => {
     fetchTicket();
     fetchTechnicians();
-  }, [id]);
+  }, [fetchTicket, fetchTechnicians]);
 
   const handleUpdateStatus = async (e) => {
     e.preventDefault();
@@ -237,6 +243,7 @@ const TicketDetail = () => {
                        <img 
                          src={fullUrl} 
                          alt={`Attachment ${i}`}
+                         loading="lazy"
                          className="w-full h-full object-cover px-1"
                          onError={(e) => { e.target.src = "https://placehold.co/300?text=Image+Not+Found" }}
                        />

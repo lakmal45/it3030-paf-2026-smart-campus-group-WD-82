@@ -73,7 +73,7 @@ const ResourceFormPage = () => {
       };
       fetchResource();
     }
-  }, [id, isEditMode, isAdmin, navigate, showToast]);
+  }, [id, isEditMode, navigate, showToast, isAuthorized, isLoading]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import StatusBadge from "./StatusBadge";
-import { Clock, MapPin, AlertCircle, ChevronRight, Filter } from "lucide-react";
+import { Clock, MapPin, AlertCircle, ChevronRight, Filter, Search } from "lucide-react";
 
 /**
  * Renders a list of tickets as cards.
@@ -10,29 +10,61 @@ import { Clock, MapPin, AlertCircle, ChevronRight, Filter } from "lucide-react";
 const TicketList = ({ fetchTickets, title, showCreateButton = false, createPath = "", emptyMessage = "No tickets found." }) => {
   const [tickets, setTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMoreLoading, setIsMoreLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [filter, setFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [error, setError] = useState(null);
 
-  const loadData = async (statusFilter = "", catFilter = "", prioFilter = "") => {
-    setIsLoading(true);
+  const loadData = async (statusFilter = "", catFilter = "", prioFilter = "", keyword = "", pageNum = 0, append = false) => {
+    if (append) {
+      setIsMoreLoading(true);
+    } else {
+      setIsLoading(true);
+      setPage(0);
+    }
     setError(null);
+
     try {
-      const { data } = await fetchTickets(statusFilter, catFilter, prioFilter);
-      setTickets(data);
+      const { data } = await fetchTickets(statusFilter, catFilter, prioFilter, keyword, pageNum, 20);
+      
+      // Handle Spring Data Page response format
+      const newTickets = data.content || [];
+      const isLast = data.last ?? true;
+
+      setTickets((prev) => (append ? [...prev, ...newTickets] : newTickets));
+      setHasMore(!isLast);
     } catch (err) {
       console.error(err);
       setError("Failed to load tickets. Please try again.");
     } finally {
       setIsLoading(false);
+      setIsMoreLoading(false);
     }
   };
 
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    loadData(filter, categoryFilter, priorityFilter, debouncedSearch, nextPage, true);
+  };
+
+  // Debounce search term
   useEffect(() => {
-    loadData(filter, categoryFilter, priorityFilter);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    loadData(filter, categoryFilter, priorityFilter, debouncedSearch, 0, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, categoryFilter, priorityFilter]);
+  }, [filter, categoryFilter, priorityFilter, debouncedSearch]);
 
   return (
     <div className="py-2">
@@ -41,9 +73,21 @@ const TicketList = ({ fetchTickets, title, showCreateButton = false, createPath 
            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">{title}</h1>
            <p className="text-slate-500 mt-1 text-sm">Track and manage service requests.</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-4 w-full xl:w-auto">
           
-          <div className="relative flex-1 sm:flex-none">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by description or location..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full xl:w-80 pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 sm:flex-none">
             <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <select
               value={filter}
@@ -95,11 +139,12 @@ const TicketList = ({ fetchTickets, title, showCreateButton = false, createPath 
           {showCreateButton && (
             <Link
               to={createPath}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-indigo-200 whitespace-nowrap"
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-indigo-200 whitespace-nowrap text-center"
             >
               + New Ticket
             </Link>
           )}
+          </div>
         </div>
       </div>
 
@@ -180,11 +225,23 @@ const TicketList = ({ fetchTickets, title, showCreateButton = false, createPath 
                    )}
                 </div>
                 <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 text-slate-400 transition-colors border border-slate-100">
-                  <ChevronRight size={18} />
+                   <ChevronRight size={18} />
                 </div>
               </div>
             </Link>
           ))}
+
+          {hasMore && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={handleLoadMore}
+                disabled={isMoreLoading}
+                className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+              >
+                {isMoreLoading ? "Loading..." : "Load More Tickets"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -15,6 +15,8 @@ import java.util.concurrent.Executor;
 @Configuration
 @EnableAsync
 public class AsyncConfig {
+    // Standard configuration for @EnableAsync. 
+    // Custom task executors can be defined here if needed.
 
     /**
      * Thread pool used for all {@code @Async} email-sending tasks.

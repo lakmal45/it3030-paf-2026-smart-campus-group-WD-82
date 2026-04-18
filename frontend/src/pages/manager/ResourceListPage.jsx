@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import resourceService from "../../services/resourceService";
 import ResourceFilters from "../../components/resources/ResourceFilters";
@@ -50,15 +50,7 @@ const ResourceListPage = () => {
   // Broadening permissions to unblock Member 1's development
   const canModify = isAdmin || isManager || isUser;
 
-  useEffect(() => {
-    fetchResources();
-    if (successMessage) {
-      showToast(successMessage);
-      setSuccessMessage(null);
-    }
-  }, [successMessage, showToast]);
-
-  const fetchResources = async (filters = {}) => {
+  const fetchResources = useCallback(async (filters = {}) => {
     setIsLoading(true);
     try {
       // Use standard getAll if no filters are applied to avoid search parameter edge cases
@@ -75,7 +67,15 @@ const ResourceListPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchResources();
+    if (successMessage) {
+      showToast(successMessage);
+      setSuccessMessage(null);
+    }
+  }, [successMessage, showToast, fetchResources]);
 
   const handleDeleteClick = (e, resource) => {
     e.stopPropagation();

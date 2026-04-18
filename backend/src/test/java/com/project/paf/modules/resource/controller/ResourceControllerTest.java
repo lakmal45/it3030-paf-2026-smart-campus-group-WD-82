@@ -29,7 +29,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ResourceController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @DisplayName("ResourceController Integration Tests")
-@SuppressWarnings("null")
 class ResourceControllerTest {
 
     @Autowired

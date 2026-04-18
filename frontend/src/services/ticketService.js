@@ -9,11 +9,12 @@ const ticketService = {
   /**
    * Fetch all tickets. Pass status, category, or priority to filter.
    */
-  getAll: (status, category, priority) => {
-    const params = {};
+  getAll: (status, category, priority, keyword, page = 0, size = 20) => {
+    const params = { page, size };
     if (status && status !== "All") params.status = status;
     if (category && category !== "All") params.category = category;
     if (priority && priority !== "All") params.priority = priority;
+    if (keyword) params.keyword = keyword;
     return api.get("/tickets", { params });
   },
 
@@ -50,8 +51,9 @@ const ticketService = {
     });
   },
 
-  /** Fetch all comments for a ticket. */
-  getComments: (id) => api.get(`/tickets/${id}/comments`),
+  /** Fetch comments for a ticket with pagination. */
+  getComments: (id, page = 0, size = 10) =>
+    api.get(`/tickets/${id}/comments`, { params: { page, size } }),
 
   /** Add a comment to a ticket. */
   addComment: (id, content) =>

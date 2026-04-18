@@ -16,7 +16,6 @@ import static org.assertj.core.api.Assertions.*;
 
 @DataJpaTest
 @DisplayName("ResourceRepository Integration Tests with JPA")
-@SuppressWarnings("null")
 class ResourceRepositoryTest {
 
     @Autowired
