@@ -33,6 +33,14 @@ const CreateBooking = () => {
     fetchResources();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const resourceParam = params.get("resource");
+    if (resourceParam) {
+      setFormData(prev => ({ ...prev, resource: resourceParam }));
+    }
+  }, [location]);
+
   const validateForm = () => {
     let newErrors = {};
     if (!formData.resource) newErrors.resource = "Resource is required.";

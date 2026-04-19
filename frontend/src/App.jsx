@@ -59,11 +59,11 @@ import History from "./pages/technician/History";
 
 // A smart component to redirect to the correct dashboard based on role
 const RoleBasedRedirect = () => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
 
   if (!user) return <Navigate to="/login" replace />;
 
-  switch (user.role?.toUpperCase()) {
+  switch (role) {
     case "ADMIN":
     case "ROLE_ADMIN":
       return <Navigate to="/dashboard/admin" replace />;

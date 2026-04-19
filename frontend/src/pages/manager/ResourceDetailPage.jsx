@@ -23,7 +23,7 @@ import ConfirmationModal from "../../components/common/ConfirmationModal";
 const ResourceDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { showToast } = useToast();
   
   const [resource, setResource] = useState(null);
@@ -33,17 +33,9 @@ const ResourceDetailPage = () => {
   const [isToggling, setIsToggling] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Robust role extraction — handles both string ("ADMIN") and object ({name:"ADMIN"}) formats
-  const getRole = () => {
-    const r = user?.role;
-    if (!r) return "";
-    if (typeof r === "string") return r.toUpperCase();
-    if (typeof r === "object" && r.name) return r.name.toUpperCase();
-    return String(r).toUpperCase();
-  };
-
-  const userRole = getRole();
-  const isAdmin = localStorage.getItem('role') === 'ADMIN' || userRole === 'ADMIN';
+  const isAdmin = 
+    role === 'ADMIN' || 
+    role === 'ROLE_ADMIN';
   
   // Strict RBAC: Only ADMIN can modify resources (Add/Edit/Delete/Status)
   const canModify = isAdmin;
@@ -89,8 +81,9 @@ const ResourceDetailPage = () => {
       setResource(updated);
       showToast(`Resource is now ${newStatus.replace(/_/g, ' ')}`, "success");
     } catch (err) {
-      console.error("Error toggling status:", err);
-      showToast("Failed to update status. unauthorized.", "error");
+      console.error("Status update error:", err);
+      const errorMsg = err.response?.data?.message || err.message || "Unknown server error";
+      showToast(`Access Denied: ${errorMsg}. Please ensure you are logged in as admin.`, "error");
     } finally {
       setIsToggling(false);
     }
@@ -281,20 +274,57 @@ const ResourceDetailPage = () => {
               )}
             </section>
 
+            {/* Reservation Status (Visible to all for clear feedback) */}
+            <section className="pt-6 sm:pt-8 border-t border-slate-200 space-y-4">
+              <h3 className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-2">Reservation availability</h3>
+              {resource.status === 'ACTIVE' ? (
+                <div className="space-y-4">
+                  <Link 
+                    to={`/dashboard/user/create-booking?resource=${encodeURIComponent(resource.name)}`}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 sm:p-5 rounded-xl sm:rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-blue-100 font-bold active:scale-[0.98]"
+                  >
+                    <Calendar className="h-5 w-5" /> Book Now
+                  </Link>
+                  <p className="text-[10px] text-center text-slate-400 font-medium">Click to initiate a new reservation request for this space.</p>
+                </div>
+              ) : (
+                <div className="w-full bg-slate-100 text-slate-500 p-4 sm:p-5 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-2 border border-slate-200 cursor-not-allowed">
+                   <ShieldAlert className="h-6 w-6 opacity-40" />
+                   <span className="font-bold text-xs sm:text-sm text-center">Currently Unavailable</span>
+                   <p className="text-[10px] opacity-60 text-center px-4 italic leading-relaxed">Admin has suspended bookings for this resource. It is currently in {resource.status.replace(/_/g, ' ')} state.</p>
+                </div>
+              )}
+            </section>
+
             {canModify && isAdmin && (
-              <section className="pt-6 sm:pt-8 border-t border-slate-200 space-y-4">
-                <h3 className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-2">Admin Controls</h3>
-                <button 
-                  onClick={handleToggleStatus}
-                  disabled={isToggling}
-                  className="group w-full bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50 p-4 sm:p-5 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 sm:gap-3 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={`Toggle to ${resource.status === 'ACTIVE' ? 'OUT_OF_SERVICE' : 'ACTIVE'}`}
-                >
-                  <ToggleLeft className={`h-5 w-5 sm:h-6 sm:w-6 transition-colors ${resource.status === 'ACTIVE' ? 'text-slate-400' : 'text-blue-600'}`} />
-                  <span className={`font-black text-sm sm:text-base tracking-tight ${resource.status === 'ACTIVE' ? 'text-slate-700' : 'text-blue-700'}`}>
-                    {isToggling ? "PROCESSING..." : `TOGGLE TO ${resource.status === 'ACTIVE' ? 'OUT OF SERVICE' : 'ACTIVE'}`}
-                  </span>
-                </button>
+              <section className="pt-6 sm:pt-8 border-t border-slate-200 space-y-4 order-first lg:order-none">
+                <h3 className="text-[10px] sm:text-xs font-black text-blue-600 uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-2 font-black">Admin Management</h3>
+                <div className="bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800 space-y-4 shadow-2xl shadow-slate-200">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-black text-white tracking-tight">System Toggle</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center">
+                        {resource.status === 'ACTIVE' ? (
+                          <><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2 animate-pulse"></span> ONLINE</>
+                        ) : (
+                          <><span className="w-1.5 h-1.5 bg-rose-500 rounded-full mr-2"></span> OFFLINE</>
+                        )}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={handleToggleStatus}
+                      disabled={isToggling}
+                      className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${resource.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-200'} ${isToggling ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-lg ring-0 transition duration-500 ease-in-out ${resource.status === 'ACTIVE' ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                  <p className="text-[10px] sm:text-xs font-medium text-slate-500 leading-relaxed italic border-t border-slate-100 pt-3">
+                    {resource.status === 'ACTIVE' 
+                      ? "Toggle to suspend this resource from the public catalogue and prevent any new reservations." 
+                      : "Restore this resource to active service, making it available for campus-wide booking."}
+                  </p>
+                </div>
               </section>
             )}
           </div>

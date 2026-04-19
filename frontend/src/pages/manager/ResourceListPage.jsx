@@ -25,7 +25,7 @@ import {
 const ResourceListPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { showToast } = useToast();
   
   const [resources, setResources] = useState([]);
@@ -36,22 +36,14 @@ const ResourceListPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [resourceToDelete, setResourceToDelete] = useState(null);
 
-  // Robust role extraction — handles both string ("ADMIN") and object ({name:"ADMIN"}) formats
-  const getRole = () => {
-    const r = user?.role;
-    if (!r) return "";
-    if (typeof r === "string") return r.toUpperCase();
-    if (typeof r === "object" && r.name) return r.name.toUpperCase();
-    return String(r).toUpperCase();
-  };
-
-  const userRole = getRole();
-  const isAdmin = localStorage.getItem('role') === 'ADMIN' || userRole === 'ADMIN';
+  const isAdmin = 
+    role === 'ADMIN' || 
+    role === 'ROLE_ADMIN';
 
   // Determine base dashboard path based on role
   const getDashboardPath = () => {
-    if (userRole === "ADMIN" || isAdmin) return "/dashboard/admin";
-    if (userRole === "MANAGER") return "/dashboard/manager";
+    if (isAdmin) return "/dashboard/admin";
+    if (role === "MANAGER") return "/dashboard/manager";
     return "/dashboard/user";
   };
 
@@ -101,7 +93,8 @@ const ResourceListPage = () => {
       fetchResources();
     } catch (err) {
       console.error("Delete error:", err);
-      showToast("Action failed. Try again.", "error");
+      const msg = err.response?.data?.message || err.message || "Unknown error";
+      showToast(`Deletion failed: ${msg}`, "error");
     } finally {
       setShowDeleteModal(false);
       setResourceToDelete(null);
@@ -117,7 +110,8 @@ const ResourceListPage = () => {
       fetchResources();
     } catch (err) {
       console.error("Status update error:", err);
-      showToast("Failed to update status", "error");
+      const msg = err.response?.data?.message || err.message || "Unknown error";
+      showToast(`Toggle failed: ${msg}`, "error");
     }
   };
 
