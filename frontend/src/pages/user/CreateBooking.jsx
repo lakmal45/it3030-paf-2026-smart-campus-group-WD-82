@@ -1,13 +1,22 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import bookingService from "../../services/bookingService";
 
 const CreateBooking = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({ resource: "", date: "", startTime: "", endTime: "", reason: "" });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const resourceParam = params.get("resource");
+    if (resourceParam) {
+      setFormData(prev => ({ ...prev, resource: resourceParam }));
+    }
+  }, [location]);
 
   const validateForm = () => {
     let newErrors = {};

@@ -43,7 +43,10 @@ public class AuthenticationFilter extends OncePerRequestFilter {
             }
 
             if (user != null) {
-                List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+                // Grant authorities based on DB role, but force ROLE_ADMIN for the master admin email
+                String roleName = (user.getEmail().equalsIgnoreCase("admin@campus.com")) ? "ADMIN" : user.getRole().name();
+                List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + roleName));
+                
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         user, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);

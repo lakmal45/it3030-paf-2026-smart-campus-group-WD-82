@@ -55,10 +55,18 @@ export const AuthProvider = ({ children }) => {
     window.location.href = "http://localhost:8081/logout";
   }, []);
 
+  const getRole = (u) => {
+    const r = u?.role;
+    if (!r) return null;
+    if (typeof r === "string") return r.toUpperCase();
+    if (typeof r === "object" && r.name) return r.name.toUpperCase();
+    return String(r).toUpperCase();
+  };
+
   const value = {
     user,
     setUser,
-    role: user?.role || null,
+    role: getRole(user),
     login,
     logout,
     isAuthenticated: !!user,

@@ -7,6 +7,8 @@ import com.project.paf.modules.notification.service.EmailService;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
+import com.project.paf.modules.resource.model.ResourceStatus;
+import com.project.paf.modules.resource.repository.ResourceRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,13 +26,16 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final EmailService emailService;
     private final UserRepository userRepository;
+    private final ResourceRepository resourceRepository;
 
     public BookingService(BookingRepository bookingRepository,
                           EmailService emailService,
-                          UserRepository userRepository) {
+                          UserRepository userRepository,
+                          ResourceRepository resourceRepository) {
         this.bookingRepository = bookingRepository;
         this.emailService = emailService;
         this.userRepository = userRepository;
+        this.resourceRepository = resourceRepository;
     }
 
     /**
@@ -44,6 +49,15 @@ public class BookingService {
         if (!endTime.isAfter(startTime)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End time must be after start time");
         }
+
+        // Strict Enforcement: Resource must be in ACTIVE status to be bookable
+        resourceRepository.findByNameIgnoreCase(resource).ifPresent(res -> {
+            if (res.getStatus() != ResourceStatus.ACTIVE) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, 
+                    "Selection Unavailable: The resource '" + resource + "' is currently " + 
+                    res.getStatus().name().replace('_', ' ') + " and cannot be reserved at this time.");
+            }
+        });
 
         List<Booking> conflicts = bookingRepository.findConflictingBookings(
                 resource, date, startTime, endTime, BookingStatus.CANCELLED);
