@@ -95,14 +95,16 @@ const Home = () => {
             className="flex items-center gap-3 group cursor-pointer"
             onClick={() => scrollToSection("hero")}
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-300">
-              <span className="text-xl font-bold text-white tracking-widest">
-                SC
-              </span>
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-300 bg-white">
+              <img
+                src="/src/assets/unihub.png"
+                alt="UniHub Logo"
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-bold tracking-tight text-slate-800 bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-purple-700">
-                Smart Campus
+                UniHub
               </span>
             </div>
           </div>
@@ -297,8 +299,8 @@ const Home = () => {
               </h3>
               <p className="text-slate-600 mb-6 leading-relaxed text-lg">
                 Developed as a comprehensive solution for the IT3030 Performance
-                Architecture framework, the Smart Campus platform is engineered
-                to modernize traditional university operations.
+                Architecture framework, the UniHub platform is engineered to
+                modernize traditional university operations.
               </p>
               <p className="text-slate-600 mb-8 leading-relaxed">
                 By leveraging role-based access, real-time analytics, and
@@ -500,7 +502,7 @@ const Home = () => {
                   Unlock the full potential of your campus infrastructure.
                 </h3>
                 <p className="text-slate-300 mb-8 leading-relaxed text-lg">
-                  Transitioning to the Smart Campus system reduces operational
+                  Transitioning to the UniHub system reduces operational
                   bottlenecks, minimizes paperwork, and provides actionable
                   insights for future investments.
                 </p>
@@ -599,7 +601,7 @@ const Home = () => {
                   </h4>
                   <p className="text-slate-600 mb-8 leading-relaxed">
                     Our team is available Monday through Friday, 9:00 AM to 5:00
-                    PM to assist you with the Smart Campus platform.
+                    PM to assist you with the UniHub platform.
                   </p>
                 </div>
 
@@ -613,7 +615,7 @@ const Home = () => {
                         Email Us
                       </p>
                       <p className="font-medium text-slate-800">
-                        support@smartcampus.edu
+                        support@unihub.edu
                       </p>
                     </div>
                   </div>
@@ -713,11 +715,15 @@ const Home = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 mb-16">
             <div className="lg:col-span-4">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
-                  <span className="text-xl font-bold text-white">SC</span>
+                <div className="w-10 h-10 rounded-xl overflow-hidden bg-white">
+                  <img
+                    src="/src/assets/unihub.png"
+                    alt="UniHub Logo"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <span className="text-white font-bold text-xl tracking-tight">
-                  Smart Campus
+                  UniHub
                 </span>
               </div>
               <p className="text-slate-400 mb-8 leading-relaxed pr-4">
