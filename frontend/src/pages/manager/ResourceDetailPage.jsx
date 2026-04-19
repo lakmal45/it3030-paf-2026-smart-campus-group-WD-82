@@ -246,30 +246,39 @@ const ResourceDetailPage = () => {
 
             <section>
               <h3 className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-4 sm:mb-6">Availability</h3>
-              <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex items-center font-black text-base sm:text-lg transition-all gap-3 ${resource.available ? 'bg-emerald-600 text-white shadow-lg sm:shadow-xl shadow-emerald-100' : 'bg-slate-200 text-slate-500'}`}>
-                {resource.available ? (
-                  <div className="flex items-center w-full gap-3">
-                    <div className="flex flex-col">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status</p>
-                      <div className={`px-3 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1.5 ${
-                        resource.status === 'ACTIVE' 
-                          ? 'bg-emerald-50 text-emerald-600' 
-                          : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${resource.status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
-                        {resource.status}
+              {resource.available && resource.status === 'ACTIVE' ? (
+                <button
+                  onClick={() => navigate("/dashboard/user/create-booking", { state: { resourceName: resource.name } })}
+                  className="w-full p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex items-center justify-center font-black text-base sm:text-lg transition-all gap-3 bg-emerald-600 text-white shadow-lg sm:shadow-xl shadow-emerald-100 hover:bg-emerald-700 active:scale-95"
+                >
+                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6" /> BOOK THIS RESOURCE
+                </button>
+              ) : (
+                <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex items-center font-black text-base sm:text-lg transition-all gap-3 ${resource.available ? 'bg-emerald-600/50 text-white/80' : 'bg-slate-200 text-slate-500'}`}>
+                  {resource.available ? (
+                    <div className="flex items-center w-full gap-3">
+                      <div className="flex flex-col">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                        <div className={`px-3 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1.5 ${
+                          resource.status === 'ACTIVE' 
+                            ? 'bg-emerald-50 text-emerald-600' 
+                            : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${resource.status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
+                          {resource.status}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center w-full gap-3">
-                    <div className="bg-slate-300 p-2 rounded-full flex-shrink-0">
-                      <div className="w-2.5 h-2.5 bg-slate-400 rounded-full"></div>
+                  ) : (
+                    <div className="flex items-center w-full gap-3">
+                      <div className="bg-slate-300 p-2 rounded-full flex-shrink-0">
+                        <div className="w-2.5 h-2.5 bg-slate-400 rounded-full"></div>
+                      </div>
+                      <span className="text-sm sm:text-base">BOOKED / BUSY</span>
                     </div>
-                    <span className="text-sm sm:text-base">BOOKED / BUSY</span>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </section>
 
             {canModify && isAdmin && (

@@ -18,7 +18,8 @@ import {
   Building2,
   FilterX,
   MapPin,
-  ToggleRight
+  ToggleRight,
+  Calendar
 } from "lucide-react";
 
 const ResourceListPage = () => {
@@ -252,6 +253,20 @@ const ResourceListPage = () => {
                   </div>
                 </div>
 
+                {!isAdmin && resource.status === 'ACTIVE' && resource.available && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate("/dashboard/user/create-booking", { state: { resourceName: resource.name } });
+                      }}
+                      className="px-6 py-2 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 transition-all active:scale-95 text-xs flex items-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4" /> BOOK NOW
+                    </button>
+                  </div>
+                )}
+
                 {canModify && (
                   <div className="flex justify-end items-center space-x-3 opacity-0 group-hover:opacity-100 transition-all">
                     {/* Compact Status Toggle for cards */}
@@ -340,6 +355,18 @@ const ResourceListPage = () => {
                       >
                         <Eye className="h-5 w-5" />
                       </button>
+                      {!isAdmin && resource.status === 'ACTIVE' && resource.available && (
+                        <button
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            navigate("/dashboard/user/create-booking", { state: { resourceName: resource.name } }); 
+                          }}
+                          className="p-3 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all active:scale-90"
+                          title="book now"
+                        >
+                          <Calendar className="h-5 w-5" />
+                        </button>
+                      )}
                       {isAdmin && (
                         <>
                           <button
