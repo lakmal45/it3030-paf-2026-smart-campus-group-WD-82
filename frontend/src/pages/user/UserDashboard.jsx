@@ -15,6 +15,8 @@ import {
   LayoutGrid,
   ListChecks,
   BookOpen,
+  Search,
+  Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ticketService from "../../services/ticketService";
@@ -251,27 +253,81 @@ const BookingRow = ({ booking, onClick, idx }) => {
 
 // ─── Resource Row ─────────────────────────────────────────────────────────────
 
-const ResourceRow = ({ resource, onClick, idx }) => {
+// ─── Resource Card ─────────────────────────────────────────────────────────────
+
+const ResourceCard = ({ resource, onClick }) => {
   const avail = resource.available && resource.status === "ACTIVE";
-  const badge = avail ? "bg-emerald-50 text-emerald-700" : resource.status === "IN_MAINTENANCE" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700";
-  const label = avail ? "Available" : resource.status === "IN_MAINTENANCE" ? "Maintenance" : resource.status === "OUT_OF_SERVICE" ? "Out of Service" : "Booked";
+  
+  const statusCfg = {
+    ACTIVE: avail ? 
+      { label: "Available", badge: "bg-emerald-50 text-emerald-700", icon: CheckCircle, iconColor: "text-emerald-500" } :
+      { label: "Booked", badge: "bg-blue-50 text-blue-700", icon: Clock, iconColor: "text-blue-500" },
+    IN_MAINTENANCE: { label: "Maintenance", badge: "bg-amber-50 text-amber-700", icon: Wrench, iconColor: "text-amber-500" },
+    OUT_OF_SERVICE: { label: "Out of Order", badge: "bg-rose-50 text-rose-700", icon: AlertCircle, iconColor: "text-rose-500" }
+  };
+  
+  const cfg = statusCfg[resource.status] || statusCfg.ACTIVE;
+
   return (
-    <div
+    <div 
       onClick={onClick}
-      className={`flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group animate-card-enter stagger-${Math.min(idx + 1, 6)} border-b border-slate-50 last:border-0`}
+      className="bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-lg hover:border-indigo-100 transition-all cursor-pointer group flex flex-col h-full"
     >
-      <div className={`p-2 rounded-lg flex-shrink-0 ${avail ? "bg-emerald-50" : "bg-amber-50"}`}>
-        <Building2 size={14} className={avail ? "text-emerald-500" : "text-amber-500"} />
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-3 rounded-xl ${avail ? "bg-indigo-50" : "bg-slate-50"} transition-colors group-hover:bg-indigo-50`}>
+          <Building2 size={24} className={avail ? "text-indigo-600" : "text-slate-400"} />
+        </div>
+        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${cfg.badge}`}>
+          {cfg.label}
+        </span>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800 truncate">{resource.name}</p>
-        <p className="text-xs text-slate-400 mt-0.5">{resource.location} · Cap {resource.capacity}</p>
+
+      <div className="flex-1">
+        <h3 className="text-base font-bold text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">
+          {resource.name}
+        </h3>
+        <div className="flex items-center gap-1.5 mt-1 text-slate-500">
+          <MapPin size={12} className="shrink-0" />
+          <p className="text-xs truncate">{resource.location}</p>
+        </div>
+        
+        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-slate-50">
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <Users size={12} />
+            <span className="text-[11px] font-medium">{resource.capacity} seats</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <BookOpen size={12} />
+            <span className="text-[11px] font-medium truncate">{resource.type}</span>
+          </div>
+        </div>
       </div>
-      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${badge}`}>{label}</span>
-      <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-400 flex-shrink-0 transition-colors" />
+
+      <button className="mt-4 w-full py-2 bg-slate-50 group-hover:bg-indigo-600 text-slate-600 group-hover:text-white rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-2">
+        {avail ? "Book This Space" : "View Schedule"}
+        <ChevronRight size={14} />
+      </button>
     </div>
   );
 };
+
+const ResourceCardSkeleton = () => (
+  <div className="bg-white rounded-2xl border border-slate-100 p-4 flex flex-col h-full">
+    <div className="flex justify-between items-start mb-4">
+      <Skeleton className="w-12 h-12 rounded-xl" />
+      <Skeleton className="w-20 h-6 rounded-full" />
+    </div>
+    <div className="space-y-2 mb-4">
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-3 w-1/2" />
+    </div>
+    <div className="mt-auto pt-4 border-t border-slate-50 flex gap-3">
+      <Skeleton className="h-4 w-12" />
+      <Skeleton className="h-4 w-12" />
+    </div>
+    <Skeleton className="mt-4 h-9 w-full rounded-xl" />
+  </div>
+);
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 
@@ -297,6 +353,10 @@ const UserDashboard = () => {
   const [initialLoad, setInitialLoad] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+
+  // Resources state
+  const [resSearch, setResSearch] = useState("");
+  const [resCategory, setResCategory] = useState("All");
 
   const fetchData = useCallback(async () => {
     try {
@@ -587,24 +647,85 @@ const UserDashboard = () => {
           RESOURCES TAB
       ══════════════════════════════════════════════════════ */}
       {activeTab === "resources" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-3 gap-4">
-            <StatCard label="Total Resources" value={resources?.length ?? 0} sub="On campus"      icon={Building2}   accent="blue"    loading={refreshing} />
-            <StatCard label="Available Now"   value={availR}                  sub="Ready to book"  icon={CheckCircle} accent="emerald" loading={refreshing} />
-            <StatCard label="In Maintenance"  value={maintR}                  sub="Being serviced" icon={Wrench}      accent="amber"   loading={refreshing} />
+        <div className="space-y-6 animate-fade-in">
+          
+          {/* Resource Filtering Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex-1 relative max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+              <input
+                type="text"
+                placeholder="Search by name, type, or location..."
+                className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all shadow-sm"
+                value={resSearch}
+                onChange={(e) => setResSearch(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+              {["All", ...new Set(resources?.map(r => r.type) || [])].map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setResCategory(cat)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                    resCategory === cat 
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-105" 
+                    : "bg-white text-slate-500 border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/30"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <Panel title="Campus Resources" action="Browse All →" onAction={() => navigate("/dashboard/user/resources")}>
+          {/* Stats row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Total Resources" value={resources?.length ?? 0} sub="On campus"      icon={Building2}   accent="indigo"    loading={refreshing} />
+            <StatCard label="Available Now"   value={availR}                  sub="Ready to book"  icon={CheckCircle} accent="emerald" loading={refreshing} />
+            <StatCard label="In Maintenance"  value={maintR}                  sub="Being serviced" icon={Wrench}      accent="amber"   loading={refreshing} />
+            <StatCard label="Out of Order"    value={resources?.filter(r => r.status === "OUT_OF_SERVICE").length ?? 0} sub="Need attention" icon={AlertCircle} accent="rose" loading={refreshing} />
+          </div>
+
+          {/* Grid View */}
+          <div className="min-h-[400px]">
             {refreshing ? (
-              [1, 2, 3].map((i) => <RowSkeleton key={i} />)
-            ) : recentResources.length === 0 ? (
-              <Empty icon={Building2} text="No active resources" sub="Check back later." />
-            ) : (
-              resources?.filter(r => r.status === "ACTIVE").map((r, i) => (
-                <ResourceRow key={r.id} resource={r} idx={i} onClick={() => navigate("/dashboard/user/resources")} />
-              ))
-            )}
-          </Panel>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => <ResourceCardSkeleton key={i} />)}
+              </div>
+            ) : (() => {
+              const filtered = resources?.filter(r => {
+                const matchesSearch = !resSearch || 
+                  r.name.toLowerCase().includes(resSearch.toLowerCase()) ||
+                  r.location.toLowerCase().includes(resSearch.toLowerCase()) ||
+                  r.type.toLowerCase().includes(resSearch.toLowerCase());
+                const matchesCat = resCategory === "All" || r.type === resCategory;
+                return matchesSearch && matchesCat;
+              });
+
+              if (!filtered || filtered.length === 0) {
+                return (
+                  <div className="bg-white rounded-3xl border border-slate-100 py-20 shadow-sm">
+                    <Empty 
+                      icon={Search} 
+                      text="No matches found" 
+                      sub={resSearch ? `We couldn't find anything matching "${resSearch}"` : "Try adjusting your filters"} 
+                      cta={resSearch || resCategory !== "All" ? "Clear Filters" : "Browse All"}
+                      onCta={() => { setResSearch(""); setResCategory("All"); }}
+                    />
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filtered.map((r) => (
+                    <ResourceCard key={r.id} resource={r} onClick={() => navigate("/dashboard/user/resources")} />
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
 
