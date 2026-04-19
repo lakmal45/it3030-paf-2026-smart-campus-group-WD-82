@@ -41,6 +41,7 @@ import UserManagement from "./pages/admin/UserManagement";
 import SystemSettings from "./pages/admin/SystemSettings";
 import AllTickets from "./pages/admin/AllTickets";
 import AllBookings from "./pages/admin/AllBookings";
+import ActivityLog from "./pages/admin/ActivityLog";
 
 // Manager Pages
 import Reports from "./pages/manager/Reports";
@@ -318,6 +319,14 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
                       <AllBookings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="activity-log"
+                  element={
+                    <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
+                      <ActivityLog />
                     </ProtectedRoute>
                   }
                 />

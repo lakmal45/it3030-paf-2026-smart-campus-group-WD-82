@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 
@@ -171,55 +172,57 @@ const UserManagement = () => {
   return (
     <div className="p-6">
       {/* ── Password Notification Banner ──────────────────────────── */}
-      {passwordNotif && (
-        <div className="fixed top-6 right-6 z-[100] w-full max-w-md animate-slide-in">
-          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl shadow-2xl shadow-emerald-100/60 p-5">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg">
-                🔑
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-emerald-800 mb-1">
-                  User Created Successfully!
-                </h3>
-                <p className="text-xs text-emerald-600 mb-3">
-                  A temporary password has been generated for{" "}
-                  <strong>{passwordNotif.email}</strong>. Please share this
-                  password with the user securely.
-                </p>
-
-                {/* Password display box */}
-                <div className="bg-white border border-emerald-200 rounded-xl p-3 flex items-center gap-2">
-                  <code className="flex-1 text-base font-mono font-bold text-slate-800 tracking-wider select-all">
-                    {passwordNotif.password}
-                  </code>
-                  <button
-                    onClick={handleCopyPassword}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      copied
-                        ? "bg-emerald-500 text-white"
-                        : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                    }`}
-                  >
-                    {copied ? "✓ Copied" : "Copy"}
-                  </button>
+      {passwordNotif &&
+        createPortal(
+          <div className="fixed top-6 right-6 z-[9999] w-full max-w-md animate-slide-in">
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl shadow-2xl shadow-emerald-100/60 p-5">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg">
+                  🔑
                 </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold text-emerald-800 mb-1">
+                    User Created Successfully!
+                  </h3>
+                  <p className="text-xs text-emerald-600 mb-3">
+                    A temporary password has been generated for{" "}
+                    <strong>{passwordNotif.email}</strong>. Please share this
+                    password with the user securely.
+                  </p>
 
-                <p className="text-[11px] text-amber-600 mt-2 font-medium">
-                  ⚠ This password will not be shown again. Make sure to note it
-                  down before closing.
-                </p>
+                  {/* Password display box */}
+                  <div className="bg-white border border-emerald-200 rounded-xl p-3 flex items-center gap-2">
+                    <code className="flex-1 text-base font-mono font-bold text-slate-800 tracking-wider select-all">
+                      {passwordNotif.password}
+                    </code>
+                    <button
+                      onClick={handleCopyPassword}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        copied
+                          ? "bg-emerald-500 text-white"
+                          : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                      }`}
+                    >
+                      {copied ? "✓ Copied" : "Copy"}
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-amber-600 mt-2 font-medium">
+                    ⚠ This password will not be shown again. Make sure to note
+                    it down before closing.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setPasswordNotif(null)}
+                  className="text-slate-400 hover:text-slate-600 text-lg leading-none p-1"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                onClick={() => setPasswordNotif(null)}
-                className="text-slate-400 hover:text-slate-600 text-lg leading-none p-1"
-              >
-                ✕
-              </button>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
@@ -232,13 +235,13 @@ const UserManagement = () => {
         <div className="flex gap-3">
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2 active:scale-95"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2 active:scale-95"
           >
             <span className="text-lg leading-none">+</span> Add User
           </button>
           <button
             onClick={fetchUsers}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm flex items-center gap-2"
+            className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-sm font-semibold transition-colors shadow-sm flex items-center gap-2"
           >
             ↻ Refresh
           </button>
@@ -301,76 +304,77 @@ const UserManagement = () => {
               {filtered.map((user) => {
                 // Match by email (works for all login methods incl. Google OAuth)
                 // Fall back to id comparison only when both sides have an id
-                const isSelf = currentUser &&
+                const isSelf =
+                  currentUser &&
                   (user.email === currentUser.email ||
                     (currentUser.id && user.id && user.id === currentUser.id));
 
                 return (
-                <tr
-                  key={user.id ?? user.email}
-                  className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
-                >
-                  {/* User info */}
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm flex-shrink-0">
-                        {initials(user.name)}
+                  <tr
+                    key={user.id ?? user.email}
+                    className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
+                  >
+                    {/* User info */}
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                          {initials(user.name)}
+                        </div>
+                        <div>
+                          <p className="text-slate-800 font-semibold text-sm flex items-center gap-2">
+                            {user.name || "—"}
+                            {isSelf && (
+                              <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-600 text-[10px] font-bold rounded-md tracking-wide">
+                                You
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-slate-500 text-xs">{user.email}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-slate-800 font-semibold text-sm flex items-center gap-2">
-                          {user.name || "—"}
-                          {isSelf && (
-                            <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-600 text-[10px] font-bold rounded-md tracking-wide">
-                              You
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-slate-500 text-xs">{user.email}</p>
-                      </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Role */}
-                  <td className="p-4">
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        roleBadge[user.role] ?? "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {user.role}
-                    </span>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="p-4 text-right whitespace-nowrap">
-                    {isSelf ? (
+                    {/* Role */}
+                    <td className="p-4">
                       <span
-                        className="text-slate-300 text-xs italic select-none"
-                        title="You cannot modify your own account"
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          roleBadge[user.role] ?? "bg-slate-100 text-slate-600"
+                        }`}
                       >
-                        — own account —
+                        {user.role}
                       </span>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => {
-                            setEditingUser(user);
-                            setPendingRole(user.role);
-                          }}
-                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium mr-4"
+                    </td>
+
+                    {/* Actions */}
+                    <td className="p-4 text-right whitespace-nowrap">
+                      {isSelf ? (
+                        <span
+                          className="text-slate-300 text-xs italic select-none"
+                          title="You cannot modify your own account"
                         >
-                          Edit Role
-                        </button>
-                        <button
-                          onClick={() => setDeleteId(user.id)}
-                          className="text-rose-500 hover:text-rose-700 text-sm font-medium"
-                        >
-                          Delete
-                        </button>
-                      </>
-                    )}
-                  </td>
-                </tr>
+                          — own account —
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => {
+                              setEditingUser(user);
+                              setPendingRole(user.role);
+                            }}
+                            className="text-indigo-600 hover:text-indigo-800 text-sm font-medium mr-4"
+                          >
+                            Edit Role
+                          </button>
+                          <button
+                            onClick={() => setDeleteId(user.id)}
+                            className="text-rose-500 hover:text-rose-700 text-sm font-medium"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
@@ -379,214 +383,222 @@ const UserManagement = () => {
       </div>
 
       {/* ── Add User Modal ──────────────────────────────────────────── */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 border border-slate-100">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-11 h-11 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl">
-                👤
+      {showAddModal &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999]">
+            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 border border-slate-100">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-11 h-11 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl">
+                  👤
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">
+                    Add New User
+                  </h2>
+                  <p className="text-slate-500 text-xs">
+                    A random password will be generated automatically
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">
-                  Add New User
-                </h2>
-                <p className="text-slate-500 text-xs">
-                  A random password will be generated automatically
-                </p>
-              </div>
-            </div>
 
-            {/* General error */}
-            {addErrors.general && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-700 text-sm">
-                {addErrors.general}
-              </div>
-            )}
-
-            {/* Name field */}
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={newUser.name}
-                onChange={(e) =>
-                  setNewUser((p) => ({ ...p, name: e.target.value }))
-                }
-                placeholder="e.g. John Doe"
-                className={`w-full px-4 py-2.5 bg-white border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 ${
-                  addErrors.name
-                    ? "border-rose-300 bg-rose-50/30"
-                    : "border-slate-200"
-                }`}
-              />
-              {addErrors.name && (
-                <p className="text-rose-500 text-xs mt-1">{addErrors.name}</p>
+              {/* General error */}
+              {addErrors.general && (
+                <div className="mb-4 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-700 text-sm">
+                  {addErrors.general}
+                </div>
               )}
-            </div>
 
-            {/* Email field */}
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={newUser.email}
-                onChange={(e) =>
-                  setNewUser((p) => ({ ...p, email: e.target.value }))
-                }
-                placeholder="e.g. user@university.edu"
-                className={`w-full px-4 py-2.5 bg-white border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 ${
-                  addErrors.email
-                    ? "border-rose-300 bg-rose-50/30"
-                    : "border-slate-200"
-                }`}
-              />
-              {addErrors.email && (
-                <p className="text-rose-500 text-xs mt-1">{addErrors.email}</p>
-              )}
-            </div>
+              {/* Name field */}
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={newUser.name}
+                  onChange={(e) =>
+                    setNewUser((p) => ({ ...p, name: e.target.value }))
+                  }
+                  placeholder="e.g. John Doe"
+                  className={`w-full px-4 py-2.5 bg-white border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 ${
+                    addErrors.name
+                      ? "border-rose-300 bg-rose-50/30"
+                      : "border-slate-200"
+                  }`}
+                />
+                {addErrors.name && (
+                  <p className="text-rose-500 text-xs mt-1">{addErrors.name}</p>
+                )}
+              </div>
 
-            {/* Role selection */}
-            <div className="mb-6">
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                Assign Role
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                {ROLES.map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setNewUser((p) => ({ ...p, role: r }))}
-                    className={`px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
-                      newUser.role === r
-                        ? "bg-emerald-50 border-emerald-500 text-emerald-700 ring-2 ring-emerald-500/10"
-                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
+              {/* Email field */}
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) =>
+                    setNewUser((p) => ({ ...p, email: e.target.value }))
+                  }
+                  placeholder="e.g. user@university.edu"
+                  className={`w-full px-4 py-2.5 bg-white border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 ${
+                    addErrors.email
+                      ? "border-rose-300 bg-rose-50/30"
+                      : "border-slate-200"
+                  }`}
+                />
+                {addErrors.email && (
+                  <p className="text-rose-500 text-xs mt-1">
+                    {addErrors.email}
+                  </p>
+                )}
+              </div>
+
+              {/* Role selection */}
+              <div className="mb-6">
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Assign Role
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {ROLES.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setNewUser((p) => ({ ...p, role: r }))}
+                      className={`px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
+                        newUser.role === r
+                          ? "bg-indigo-50 border-indigo-500 text-indigo-700 ring-2 ring-indigo-500/10"
+                          : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setNewUser({ name: "", email: "", role: "USER" });
+                    setAddErrors({});
+                  }}
+                  className="px-4 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
+                  disabled={addLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={addLoading}
+                  onClick={handleAddUser}
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-all shadow-md shadow-indigo-200 active:scale-95"
+                >
+                  {addLoading ? "Creating…" : "Create User"}
+                </button>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setNewUser({ name: "", email: "", role: "USER" });
-                  setAddErrors({});
-                }}
-                className="px-4 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
-                disabled={addLoading}
-              >
-                Cancel
-              </button>
-              <button
-                disabled={addLoading}
-                onClick={handleAddUser}
-                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-all shadow-md shadow-emerald-200 active:scale-95"
-              >
-                {addLoading ? "Creating…" : "Create User"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* Edit Role Modal */}
-      {editingUser && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 border border-slate-100">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg">
-                {initials(editingUser.name)}
+      {editingUser &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999]">
+            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 border border-slate-100">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg">
+                  {initials(editingUser.name)}
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">
+                    Edit User Role
+                  </h2>
+                  <p className="text-slate-500 text-sm">{editingUser.email}</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">
-                  Edit User Role
-                </h2>
-                <p className="text-slate-500 text-sm">{editingUser.email}</p>
-              </div>
-            </div>
 
-            <div className="mb-8">
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                Select New Role
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                {ROLES.map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setPendingRole(r)}
-                    className={`px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
-                      pendingRole === r
-                        ? "bg-indigo-50 border-indigo-500 text-indigo-700 ring-2 ring-indigo-500/10"
-                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
+              <div className="mb-8">
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Select New Role
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {ROLES.map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setPendingRole(r)}
+                      className={`px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
+                        pendingRole === r
+                          ? "bg-indigo-50 border-indigo-500 text-indigo-700 ring-2 ring-indigo-500/10"
+                          : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setEditingUser(null)}
+                  className="px-4 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
+                  disabled={actionLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={actionLoading}
+                  onClick={handleRoleUpdate}
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-all shadow-md shadow-indigo-200 active:scale-95"
+                >
+                  {actionLoading ? "Saving..." : "Update Role"}
+                </button>
               </div>
             </div>
-
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setEditingUser(null)}
-                className="px-4 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
-                disabled={actionLoading}
-              >
-                Cancel
-              </button>
-              <button
-                disabled={actionLoading}
-                onClick={handleRoleUpdate}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-all shadow-md shadow-indigo-200 active:scale-95"
-              >
-                {actionLoading ? "Saving..." : "Update Role"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* Delete confirmation modal */}
-      {deleteId && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
-            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-4 text-xl">
-              ⚠️
+      {deleteId &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999]">
+            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+              <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-4 text-xl">
+                ⚠️
+              </div>
+              <h2 className="text-lg font-bold text-slate-800 mb-2">
+                Delete User
+              </h2>
+              <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+                Are you sure you want to delete this user? This action is
+                permanent and cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setDeleteId(null)}
+                  className="px-4 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800"
+                  disabled={actionLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={actionLoading}
+                  onClick={() => handleDelete(deleteId)}
+                  className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-all shadow-md shadow-rose-200 active:scale-95"
+                >
+                  {actionLoading ? "Deleting..." : "Delete User"}
+                </button>
+              </div>
             </div>
-            <h2 className="text-lg font-bold text-slate-800 mb-2">
-              Delete User
-            </h2>
-            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-              Are you sure you want to delete this user? This action is
-              permanent and cannot be undone.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="px-4 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800"
-                disabled={actionLoading}
-              >
-                Cancel
-              </button>
-              <button
-                disabled={actionLoading}
-                onClick={() => handleDelete(deleteId)}
-                className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-all shadow-md shadow-rose-200 active:scale-95"
-              >
-                {actionLoading ? "Deleting..." : "Delete User"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* Slide-in animation style */}
       <style>{`

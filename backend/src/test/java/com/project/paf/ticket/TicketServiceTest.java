@@ -1,5 +1,6 @@
 package com.project.paf.ticket;
 
+import com.project.paf.modules.auditlog.AuditLogService;
 import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
@@ -48,6 +49,9 @@ public class TicketServiceTest {
 
     @Mock
     private UserRepository userRepository;
+    
+    @Mock
+    private AuditLogService auditLogService;
 
     @InjectMocks
     private TicketService ticketService;

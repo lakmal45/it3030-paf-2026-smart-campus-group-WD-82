@@ -1,5 +1,7 @@
 package com.project.paf.modules.resource.service;
 
+import com.project.paf.modules.auditlog.AuditAction;
+import com.project.paf.modules.auditlog.AuditLogService;
 import com.project.paf.modules.resource.dto.ResourceRequestDTO;
 import com.project.paf.modules.resource.dto.ResourceResponseDTO;
 import com.project.paf.modules.resource.exception.ResourceNotFoundException;
@@ -16,9 +18,11 @@ import java.util.List;
 public class ResourceService {
 
     private final ResourceRepository resourceRepository;
+    private final AuditLogService auditLogService;
 
-    public ResourceService(ResourceRepository resourceRepository) {
+    public ResourceService(ResourceRepository resourceRepository, AuditLogService auditLogService) {
         this.resourceRepository = resourceRepository;
+        this.auditLogService = auditLogService;
     }
 
     public List<ResourceResponseDTO> getAllResources() {
@@ -51,6 +55,11 @@ public class ResourceService {
     public ResourceResponseDTO createResource(@Valid ResourceRequestDTO requestDTO) {
         Resource resource = toEntity(requestDTO);
         Resource savedResource = resourceRepository.save(java.util.Objects.requireNonNull(resource));
+
+        auditLogService.log(AuditAction.RESOURCE_CREATED, null,
+                "Resource '" + savedResource.getName() + "' (" + savedResource.getType() + ") created at " + savedResource.getLocation(),
+                "Resource", savedResource.getId());
+
         return toResponseDTO(savedResource);
     }
 
@@ -67,6 +76,11 @@ public class ResourceService {
         existingResource.setDescription(requestDTO.getDescription());
 
         Resource updatedResource = resourceRepository.save(java.util.Objects.requireNonNull(existingResource));
+
+        auditLogService.log(AuditAction.RESOURCE_UPDATED, null,
+                "Resource '" + updatedResource.getName() + "' (#" + id + ") updated",
+                "Resource", id);
+
         return toResponseDTO(updatedResource);
     }
 
@@ -90,7 +104,12 @@ public class ResourceService {
     public void deleteResource(@NonNull Long id) {
         Resource existingResource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + id));
+        String name = existingResource.getName();
         resourceRepository.delete(java.util.Objects.requireNonNull(existingResource));
+
+        auditLogService.log(AuditAction.RESOURCE_DELETED, null,
+                "Resource '" + name + "' (#" + id + ") deleted",
+                "Resource", id);
     }
 
     private Resource toEntity(ResourceRequestDTO requestDTO) {

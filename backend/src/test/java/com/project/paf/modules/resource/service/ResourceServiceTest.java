@@ -6,6 +6,7 @@ import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import com.project.paf.modules.resource.model.Resource;
 import com.project.paf.modules.resource.model.ResourceStatus;
 import com.project.paf.modules.resource.repository.ResourceRepository;
+import com.project.paf.modules.auditlog.AuditLogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ class ResourceServiceTest {
 
     @Mock
     private ResourceRepository resourceRepository;
+    
+    @Mock
+    private AuditLogService auditLogService;
 
     @InjectMocks
     private ResourceService resourceService;
@@ -414,4 +418,5 @@ class ResourceServiceTest {
                 });
         verify(resourceRepository, times(1)).findByFilters("Room", "Room", "Building 1", null, true);
     }
+
 }
