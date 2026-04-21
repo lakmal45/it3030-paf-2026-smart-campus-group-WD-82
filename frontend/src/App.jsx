@@ -38,7 +38,6 @@ import TicketDetail from "./components/tickets/TicketDetail";
 
 // Admin Pages
 import UserManagement from "./pages/admin/UserManagement";
-import SystemSettings from "./pages/admin/SystemSettings";
 import AllTickets from "./pages/admin/AllTickets";
 import AllBookings from "./pages/admin/AllBookings";
 import ActivityLog from "./pages/admin/ActivityLog";
@@ -247,14 +246,6 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
                       <UserManagement />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="settings"
-                  element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
-                      <SystemSettings />
                     </ProtectedRoute>
                   }
                 />
