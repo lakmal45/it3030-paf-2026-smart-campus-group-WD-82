@@ -32,22 +32,27 @@ public class ResourceController {
     /**
      * Hand-rolled Security Guard: aligns with the app's established pattern.
      */
-    private void requireAdmin() {
+    private void requireAdminOrManager() {
         org.springframework.security.core.Authentication auth = 
             org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
 
-        if (auth == null || !(auth.getPrincipal() instanceof User)) {
+        if (auth == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: No valid identity found.");
         }
 
-        User user = (User) auth.getPrincipal();
-        
-        // Use the authority set in AuthenticationFilter or directly check the user object
-        boolean isAdmin = user.getEmail().equalsIgnoreCase("admin@campus.com") || 
-                         (user.getRole() != null && user.getRole() == Role.ADMIN);
+        // Check authorities for ROLE_ADMIN or ROLE_MANAGER (most reliable)
+        boolean isAuthorized = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_MANAGER"));
 
-        if (!isAdmin) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Admin status required.");
+        // Fallback: Check the User object directly if authorities aren't properly mapped
+        if (!isAuthorized && auth.getPrincipal() instanceof User) {
+            User user = (User) auth.getPrincipal();
+            isAuthorized = user.getEmail().equalsIgnoreCase("admin@campus.com") || 
+                          (user.getRole() != null && (user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER));
+        }
+
+        if (!isAuthorized) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Admin or Manager status required.");
         }
     }
 
@@ -72,7 +77,7 @@ public class ResourceController {
     @ApiResponse(responseCode = "400", description = "Invalid input data")
     public ResponseEntity<ResourceResponseDTO> createResource(
             @Valid @RequestBody ResourceRequestDTO requestDTO) {
-        requireAdmin();
+        requireAdminOrManager();
         ResourceResponseDTO created = resourceService.createResource(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -84,7 +89,7 @@ public class ResourceController {
     public ResponseEntity<ResourceResponseDTO> updateResource(
             @PathVariable @NonNull Long id, 
             @Valid @RequestBody ResourceRequestDTO requestDTO) {
-        requireAdmin();
+        requireAdminOrManager();
         return ResponseEntity.ok(resourceService.updateResource(id, requestDTO));
     }
 
@@ -94,7 +99,7 @@ public class ResourceController {
     @ApiResponse(responseCode = "404", description = "Resource not found")
     public ResponseEntity<Void> deleteResource(
             @PathVariable @NonNull Long id) {
-        requireAdmin();
+        requireAdminOrManager();
         resourceService.deleteResource(id);
         return ResponseEntity.noContent().build();
     }
@@ -118,7 +123,7 @@ public class ResourceController {
     public ResponseEntity<ResourceResponseDTO> updateStatus(
             @PathVariable @NonNull Long id,
             @RequestParam ResourceStatus status) {
-        requireAdmin();
+        requireAdminOrManager();
         return ResponseEntity.ok(resourceService.updateResourceStatus(id, status));
     }
 }

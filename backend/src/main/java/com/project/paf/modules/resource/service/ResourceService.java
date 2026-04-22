@@ -19,10 +19,25 @@ public class ResourceService {
 
     private final ResourceRepository resourceRepository;
     private final AuditLogService auditLogService;
+    private final com.project.paf.modules.user.repository.UserRepository userRepository;
 
-    public ResourceService(ResourceRepository resourceRepository, AuditLogService auditLogService) {
+    public ResourceService(ResourceRepository resourceRepository, AuditLogService auditLogService, com.project.paf.modules.user.repository.UserRepository userRepository) {
         this.resourceRepository = resourceRepository;
         this.auditLogService = auditLogService;
+        this.userRepository = userRepository;
+    }
+
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        // Temporary fix: Ensure Kasun and master admin have correct roles in the current DB
+        userRepository.findAll().forEach(u -> {
+            if (u.getEmail().equalsIgnoreCase("admin@campus.com") || u.getName().toLowerCase().contains("kasun")) {
+                if (u.getRole() != com.project.paf.modules.user.model.Role.ADMIN) {
+                    u.setRole(com.project.paf.modules.user.model.Role.ADMIN);
+                    userRepository.save(u);
+                }
+            }
+        });
     }
 
     public List<ResourceResponseDTO> getAllResources() {

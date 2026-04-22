@@ -40,17 +40,21 @@ const ResourceListPage = () => {
     role === 'ADMIN' || 
     role === 'ROLE_ADMIN';
 
+  const isManager = 
+    role === 'MANAGER' || 
+    role === 'ROLE_MANAGER';
+
   // Determine base dashboard path based on role
   const getDashboardPath = () => {
     if (isAdmin) return "/dashboard/admin";
-    if (role === "MANAGER") return "/dashboard/manager";
+    if (isManager) return "/dashboard/manager";
     return "/dashboard/user";
   };
 
   const dashboardPath = getDashboardPath();
 
-  // Strict RBAC: Only ADMIN can modify resources (Add/Edit/Delete/Status)
-  const canModify = isAdmin;
+  // Strict RBAC: Both ADMIN and MANAGER can modify resources (Add/Edit/Delete/Status)
+  const canModify = isAdmin || isManager;
 
   const fetchResources = useCallback(async (filters = {}) => {
     setIsLoading(true);

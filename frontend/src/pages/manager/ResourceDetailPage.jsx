@@ -37,8 +37,12 @@ const ResourceDetailPage = () => {
     role === 'ADMIN' || 
     role === 'ROLE_ADMIN';
   
-  // Strict RBAC: Only ADMIN can modify resources (Add/Edit/Delete/Status)
-  const canModify = isAdmin;
+  const isManager = 
+    role === 'MANAGER' || 
+    role === 'ROLE_MANAGER';
+  
+  // Strict RBAC: Both ADMIN and MANAGER can modify resources (Add/Edit/Delete/Status)
+  const canModify = isAdmin || isManager;
 
   useEffect(() => {
     const fetchResource = async () => {
