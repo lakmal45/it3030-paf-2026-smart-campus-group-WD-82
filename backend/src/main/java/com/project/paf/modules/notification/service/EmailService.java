@@ -106,6 +106,68 @@ public class EmailService {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Admin-created account notifications
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Sends an account-created email to a user whose account was provisioned by an admin.
+     * The email contains the user's temporary password so they can log in immediately.
+     * The admin never sees this password — it goes directly to the user's inbox.
+     *
+     * @param name         the new user's display name
+     * @param email        the new user's email address
+     * @param tempPassword the system-generated temporary password (plain-text, sent once)
+     * @param role         the role assigned by the admin (e.g. "USER", "TECHNICIAN")
+     */
+    @Async("emailTaskExecutor")
+    public void notifyAdminCreatedUser(String name, String email, String tempPassword, String role) {
+        if (email == null || email.isBlank()) {
+            log.warn("Cannot send admin-created-user email: email is blank");
+            return;
+        }
+        String subject = "🏫 You've Been Added to Smart Campus";
+        String html    = EmailTemplates.adminCreatedUser(name, email, tempPassword, role);
+        sendHtmlEmail(email, name, subject, html);
+        log.info("Admin-created-user credentials email queued for '{}'", email);
+    }
+
+    /**
+     * Sends a notification when an admin changes a user's role.
+     *
+     * @param user     the user whose role was changed
+     * @param newRole  the new role assigned to the user
+     */
+    @Async("emailTaskExecutor")
+    public void notifyRoleChanged(User user, String newRole) {
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            return;
+        }
+
+        // Always send in-app notification
+        appNotificationService.createNotification(user,
+            "Role Updated",
+            "Your system role has been updated to " + newRole + ".",
+            "info");
+
+        if (!user.isEmailNotificationsEnabled()) {
+            log.info("Email notifications disabled for '{}'; skipping role-change email", user.getEmail());
+            return;
+        }
+
+        String to      = user.getEmail();
+        String name    = user.getName();
+        String subject = "🔄 Role Updated — Smart Campus";
+        String html    = "<div style=\"font-family:sans-serif;color:#333;line-height:1.5;max-width:600px;\">" +
+                         "<h2 style=\"color:#4f46e5;\">Role Updated</h2>" +
+                         "<p>Hello " + (name != null ? name : "") + ",</p>" +
+                         "<p>An administrator has updated your system role to <strong>" + newRole + "</strong>.</p>" +
+                         "<p>If you believe this is an error, please contact support.</p>" +
+                         "</div>";
+        sendHtmlEmail(to, name, subject, html);
+        log.info("Role-change notification queued for '{}'", to);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Ticket event notifications
     // ─────────────────────────────────────────────────────────────────────────
 

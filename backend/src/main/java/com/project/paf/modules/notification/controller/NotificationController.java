@@ -78,4 +78,14 @@ public class NotificationController {
         appNotificationService.markAllAsRead(user);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteNotification(
+            @PathVariable Long id,
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
+        User user = resolveUser(session, emailHeader);
+        appNotificationService.deleteNotification(id, user);
+        return ResponseEntity.noContent().build();
+    }
 }

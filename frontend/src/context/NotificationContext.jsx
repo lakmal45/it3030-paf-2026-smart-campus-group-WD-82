@@ -8,16 +8,20 @@ export const NotificationProvider = ({ children }) => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
     try {
+      setLoading(true);
       const response = await api.get("/notifications");
       setNotifications(response.data);
       const countResponse = await api.get("/notifications/unread-count");
       setUnreadCount(countResponse.data);
     } catch (error) {
       console.error("Failed to fetch notifications", error);
+    } finally {
+      setLoading(false);
     }
   }, [user]);
 
@@ -54,8 +58,20 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
+  const deleteNotification = async (id) => {
+    try {
+      await api.delete(`/notifications/${id}`);
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      // Re-fetch count just in case
+      const countResponse = await api.get("/notifications/unread-count");
+      setUnreadCount(countResponse.data);
+    } catch (error) {
+      console.error("Failed to delete notification", error);
+    }
+  };
+
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, fetchNotifications, loading }}>
       {children}
     </NotificationContext.Provider>
   );
