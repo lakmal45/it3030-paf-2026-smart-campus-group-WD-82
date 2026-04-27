@@ -1,5 +1,6 @@
 package com.project.paf.ticket;
 
+
 import java.time.LocalDateTime;
 
 import com.project.paf.modules.user.model.User;
@@ -9,6 +10,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
@@ -23,7 +25,9 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "ticket_comments")
+@Table(name = "ticket_comments", indexes = {
+    @Index(name = "idx_comment_ticket", columnList = "ticket_id")
+})
 public class TicketComment {
 
     @Id

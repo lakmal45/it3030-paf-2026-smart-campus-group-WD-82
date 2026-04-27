@@ -63,6 +63,16 @@ const AllBookings = () => {
     }
   };
 
+  const handleConfirm = async (id) => {
+    try {
+      const updated = await bookingService.confirmBooking(id);
+      setBookings(bookings.map((b) => (b.id === id ? updated : b)));
+    } catch (err) {
+      console.error("Failed to confirm booking:", err);
+      alert("Failed to confirm booking.");
+    }
+  };
+
   const handleEditClick = (booking) => {
     setEditingBooking(booking.id);
     setEditForm({
@@ -168,7 +178,7 @@ const AllBookings = () => {
                   </tr>
                 ) : (
                   filteredBookings.map((booking) => (
-                    <tr key={booking.id} className={`transition-all ${editingBooking === booking.id ? 'bg-indigo-50/50' : 'hover:bg-slate-50/30'}`}>
+                    <tr key={booking.id} className={`group transition-all ${editingBooking === booking.id ? 'bg-indigo-50/50' : 'hover:bg-slate-50/30'}`}>
                       
                       {editingBooking === booking.id ? (
                         <td colSpan="5" className="p-8">
@@ -295,7 +305,16 @@ const AllBookings = () => {
                             </div>
                           </td>
                           <td className="px-8 py-8 text-right">
-                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                            <div className="flex items-center justify-end gap-1 transition-all">
+                              {booking.status === 'PENDING' && (
+                                <button
+                                  onClick={() => handleConfirm(booking.id)}
+                                  className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-white hover:shadow-md rounded-xl transition-all"
+                                  title="Confirm Booking"
+                                >
+                                  <CheckCircle size={18} />
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleEditClick(booking)}
                                 className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-md rounded-xl transition-all"

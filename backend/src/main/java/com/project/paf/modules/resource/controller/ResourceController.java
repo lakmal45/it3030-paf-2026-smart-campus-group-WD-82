@@ -4,13 +4,17 @@ import com.project.paf.modules.resource.dto.ResourceRequestDTO;
 import com.project.paf.modules.resource.dto.ResourceResponseDTO;
 import com.project.paf.modules.resource.model.ResourceStatus;
 import com.project.paf.modules.resource.service.ResourceService;
+import com.project.paf.modules.user.model.Role;
+import com.project.paf.modules.user.model.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -20,9 +24,36 @@ import java.util.List;
 public class ResourceController {
 
     private final ResourceService resourceService;
-
+    
     public ResourceController(ResourceService resourceService) {
         this.resourceService = resourceService;
+    }
+
+    /**
+     * Hand-rolled Security Guard: aligns with the app's established pattern.
+     */
+    private void requireAdminOrManager() {
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: No valid identity found.");
+        }
+
+        // Check authorities for ROLE_ADMIN or ROLE_MANAGER (most reliable)
+        boolean isAuthorized = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_MANAGER"));
+
+        // Fallback: Check the User object directly if authorities aren't properly mapped
+        if (!isAuthorized && auth.getPrincipal() instanceof User) {
+            User user = (User) auth.getPrincipal();
+            isAuthorized = user.getEmail().equalsIgnoreCase("admin@campus.com") || 
+                          (user.getRole() != null && (user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER));
+        }
+
+        if (!isAuthorized) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Admin or Manager status required.");
+        }
     }
 
     @GetMapping
@@ -36,7 +67,7 @@ public class ResourceController {
     @Operation(summary = "Get resource by ID", description = "Retrieves details of a specific resource using its ID")
     @ApiResponse(responseCode = "200", description = "Resource found")
     @ApiResponse(responseCode = "404", description = "Resource not found")
-    public ResponseEntity<ResourceResponseDTO> getResourceById(@PathVariable Long id) {
+    public ResponseEntity<ResourceResponseDTO> getResourceById(@PathVariable @NonNull Long id) {
         return ResponseEntity.ok(resourceService.getResourceById(id));
     }
 
@@ -44,7 +75,9 @@ public class ResourceController {
     @Operation(summary = "Create a new resource", description = "Adds a new resource to the campus catalogue (Admin only)")
     @ApiResponse(responseCode = "201", description = "Resource created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data")
-    public ResponseEntity<ResourceResponseDTO> createResource(@Valid @RequestBody ResourceRequestDTO requestDTO) {
+    public ResponseEntity<ResourceResponseDTO> createResource(
+            @Valid @RequestBody ResourceRequestDTO requestDTO) {
+        requireAdminOrManager();
         ResourceResponseDTO created = resourceService.createResource(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -53,7 +86,10 @@ public class ResourceController {
     @Operation(summary = "Update an existing resource", description = "Modifies an existing resource's details (Admin only)")
     @ApiResponse(responseCode = "200", description = "Resource updated successfully")
     @ApiResponse(responseCode = "404", description = "Resource not found")
-    public ResponseEntity<ResourceResponseDTO> updateResource(@PathVariable Long id, @Valid @RequestBody ResourceRequestDTO requestDTO) {
+    public ResponseEntity<ResourceResponseDTO> updateResource(
+            @PathVariable @NonNull Long id, 
+            @Valid @RequestBody ResourceRequestDTO requestDTO) {
+        requireAdminOrManager();
         return ResponseEntity.ok(resourceService.updateResource(id, requestDTO));
     }
 
@@ -61,7 +97,9 @@ public class ResourceController {
     @Operation(summary = "Delete a resource", description = "Removes a resource from the system (Admin only)")
     @ApiResponse(responseCode = "204", description = "Resource deleted successfully")
     @ApiResponse(responseCode = "404", description = "Resource not found")
-    public ResponseEntity<Void> deleteResource(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteResource(
+            @PathVariable @NonNull Long id) {
+        requireAdminOrManager();
         resourceService.deleteResource(id);
         return ResponseEntity.noContent().build();
     }
@@ -80,12 +118,12 @@ public class ResourceController {
     }
 
     @PatchMapping("/{id}/status")
-    @Operation(summary = "Update resource status", description = "Toggles resource status (Admin/Manager only)")
+    @Operation(summary = "Update resource status", description = "Toggles resource status (Admin only)")
     @ApiResponse(responseCode = "200", description = "Status updated successfully")
     public ResponseEntity<ResourceResponseDTO> updateStatus(
-            @PathVariable Long id,
-            @RequestParam ResourceStatus status
-    ) {
+            @PathVariable @NonNull Long id,
+            @RequestParam ResourceStatus status) {
+        requireAdminOrManager();
         return ResponseEntity.ok(resourceService.updateResourceStatus(id, status));
     }
 }

@@ -73,9 +73,11 @@ public class SecurityConfig {
                         // booking endpoints (auth handled manually in BookingController)
                         .requestMatchers("/api/bookings/**").permitAll()
 
-                        // Member 3 – ticket endpoints (PermitAll allows manual session + header check
-                        // in controller)
+                        // Member 3 – ticket endpoints
                         .requestMatchers("/api/tickets/**").permitAll()
+                        
+                        // Resource endpoints - Manual auth handled in ResourceController
+                        .requestMatchers("/api/resources/**").permitAll()
 
                         .anyRequest().authenticated())
 

@@ -13,6 +13,7 @@ import {
   CheckSquare,
   History,
   Box,
+  ClipboardList,
 } from "lucide-react";
 
 export const roleNavigation = {
@@ -37,15 +38,16 @@ export const roleNavigation = {
     { name: "User Management", path: "/dashboard/admin/users", icon: Users },
     { name: "All Bookings", path: "/dashboard/admin/bookings", icon: Calendar },
     { name: "All Tickets", path: "/dashboard/admin/tickets", icon: Ticket },
-    {
-      name: "System Settings",
-      path: "/dashboard/admin/settings",
-      icon: Settings,
-    },
     { name: "Resources", path: "/dashboard/admin/resources", icon: Box },
+    {
+      name: "Activity Log",
+      path: "/dashboard/admin/activity-log",
+      icon: ClipboardList,
+    },
   ],
   MANAGER: [
     { name: "Dashboard", path: "/dashboard/manager", icon: LayoutDashboard },
+    { name: "All Tickets", path: "/dashboard/manager/tickets", icon: Ticket },
     { name: "Reports", path: "/dashboard/manager/reports", icon: FileText },
     {
       name: "Booking Analytics",

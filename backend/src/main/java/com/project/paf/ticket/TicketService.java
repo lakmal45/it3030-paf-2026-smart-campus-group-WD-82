@@ -1,19 +1,25 @@
 package com.project.paf.ticket;
 
+import com.project.paf.modules.auditlog.AuditAction;
+import com.project.paf.modules.auditlog.AuditLogService;
 import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
 import com.project.paf.modules.notification.service.EmailService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.lang.NonNull;
 import java.util.Objects;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Business-logic service for the Maintenance & Incident Ticketing System.
@@ -36,17 +42,20 @@ public class TicketService {
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final AuditLogService auditLogService;
 
     public TicketService(TicketRepository ticketRepository,
                          TicketCommentRepository commentRepository,
                          FileStorageService fileStorageService,
                          UserRepository userRepository,
-                         EmailService emailService) {
+                         EmailService emailService,
+                         AuditLogService auditLogService) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.auditLogService = auditLogService;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -81,6 +90,11 @@ public class TicketService {
         List<User> adminsAndManagers = userRepository.findByRoleIn(List.of(Role.ADMIN, Role.MANAGER));
         emailService.notifyAdminsAndManagersNewTicket(saved, adminsAndManagers);
 
+        // Audit
+        auditLogService.log(AuditAction.TICKET_CREATED, currentUser,
+                "Ticket #" + saved.getId() + " (" + saved.getCategory() + ") created: " + saved.getLocation(),
+                "Ticket", saved.getId());
+
         return mapToResponse(saved);
     }
 
@@ -93,7 +107,7 @@ public class TicketService {
      * @param currentUser authenticated caller
      * @return updated ticket
      */
-    public TicketResponse updateTicket(Long id, UpdateTicketRequest request, User currentUser) {
+    public TicketResponse updateTicket(@NonNull Long id, UpdateTicketRequest request, User currentUser) {
         IncidentTicket ticket = findTicketOrThrow(id);
 
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
@@ -125,65 +139,39 @@ public class TicketService {
      * @throws ResourceNotFoundException if no ticket exists with the given id
      */
     @Transactional(readOnly = true)
-    public TicketResponse getTicketById(Long id) {
+    public TicketResponse getTicketById(@NonNull Long id) {
         IncidentTicket ticket = findTicketOrThrow(id);
         return mapToResponse(ticket);
     }
 
     /**
-     * Returns tickets visible to the current user.
-     *
-     * <ul>
-     *   <li>ADMIN / TECHNICIAN → all tickets (with optional status filter).</li>
-     *   <li>USER → only their own tickets (with optional status filter).</li>
-     * </ul>
+     * Returns tickets visible to the current user with pagination and database-level filtering.
      *
      * @param statusFilter   optional status string to filter by
      * @param categoryFilter optional category string to filter by
      * @param priorityFilter optional priority string to filter by
+     * @param page           page number (0-indexed)
+     * @param size           page size
      * @param currentUser    the authenticated caller
-     * @return list of {@link TicketResponse}
+     * @return a page of {@link TicketResponse}
      */
     @Transactional(readOnly = true)
-    public List<TicketResponse> getAllTickets(String statusFilter, String categoryFilter, String priorityFilter, User currentUser) {
+    public Page<TicketResponse> getAllTickets(String statusFilter, String categoryFilter, String priorityFilter, String keyword, int page, int size, User currentUser) {
         boolean isAdminOrManager = currentUser.getRole() == Role.ADMIN
                 || currentUser.getRole() == Role.MANAGER;
         boolean isTechnician = currentUser.getRole() == Role.TECHNICIAN;
 
-        List<IncidentTicket> tickets;
+        TicketStatus status = (statusFilter != null && !statusFilter.isBlank()) ? parseStatus(statusFilter) : null;
+        User creator = (!isAdminOrManager && !isTechnician) ? currentUser : null;
+        User technician = isTechnician ? currentUser : null;
 
-        if (statusFilter != null && !statusFilter.isBlank()) {
-            TicketStatus status = parseStatus(statusFilter);
-            if (isAdminOrManager) {
-                tickets = ticketRepository.findByStatus(status);
-            } else if (isTechnician) {
-                tickets = ticketRepository.findByAssignedTechnicianAndStatus(currentUser, status);
-            } else {
-                tickets = ticketRepository.findByCreatedByAndStatus(currentUser, status);
-            }
-        } else {
-            if (isAdminOrManager) {
-                tickets = ticketRepository.findAll();
-            } else if (isTechnician) {
-                tickets = ticketRepository.findByAssignedTechnician(currentUser);
-            } else {
-                tickets = ticketRepository.findByCreatedBy(currentUser);
-            }
-        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        if (categoryFilter != null && !categoryFilter.isBlank()) {
-            tickets = tickets.stream()
-                             .filter(t -> t.getCategory().equalsIgnoreCase(categoryFilter))
-                             .collect(Collectors.toList());
-        }
+        Page<IncidentTicket> ticketPage = ticketRepository.findAllWithFilters(
+                status, categoryFilter, priorityFilter, creator, technician, keyword, pageable
+        );
 
-        if (priorityFilter != null && !priorityFilter.isBlank()) {
-            tickets = tickets.stream()
-                             .filter(t -> t.getPriority().equalsIgnoreCase(priorityFilter))
-                             .collect(Collectors.toList());
-        }
-
-        return tickets.stream().map(this::mapToResponse).collect(Collectors.toList());
+        return ticketPage.map(this::mapToResponse);
     }
 
     /**
@@ -204,7 +192,7 @@ public class TicketService {
      * @return updated ticket as {@link TicketResponse}
      * @throws IllegalStateException if the transition is not permitted
      */
-    public TicketResponse updateTicketStatus(Long id,
+    public TicketResponse updateTicketStatus(@NonNull Long id,
                                              UpdateTicketStatusRequest request,
                                              User currentUser) {
         if (currentUser.getRole() == Role.USER) {
@@ -228,6 +216,11 @@ public class TicketService {
         // Notify the ticket creator about the status change
         emailService.notifyStatusChange(updated, current);
 
+        // Audit
+        auditLogService.log(AuditAction.TICKET_STATUS_UPDATED, currentUser,
+                "Ticket #" + id + " status: " + current + " → " + next,
+                "Ticket", id);
+
         return mapToResponse(updated);
     }
 
@@ -242,7 +235,7 @@ public class TicketService {
      * @return updated ticket as {@link TicketResponse}
      * @throws ResourceNotFoundException if the technician user does not exist
      */
-    public TicketResponse assignTechnician(Long ticketId, Long technicianId, User currentUser) {
+    public TicketResponse assignTechnician(@NonNull Long ticketId, @NonNull Long technicianId, User currentUser) {
         if (currentUser.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only ADMIN can assign technicians.");
         }
@@ -266,11 +259,13 @@ public class TicketService {
         log.info("Ticket #{} assigned to technician '{}' by admin '{}'",
                 ticketId, technician.getEmail(), currentUser.getEmail());
 
-        notificationService.sendNotification(
-            technician,
-            "You have been assigned to ticket #" + ticket.getId(),
-            "TICKET_UPDATE"
-        );
+        // Notify technician via email + in-app push (both handled inside notifyTechnicianAssigned)
+        emailService.notifyTechnicianAssigned(updated, technician);
+
+        // Audit
+        auditLogService.log(AuditAction.TICKET_ASSIGNED, currentUser,
+                "Ticket #" + ticketId + " assigned to technician '" + technician.getName() + "'",
+                "Ticket", ticketId);
 
         return mapToResponse(updated);
     }
@@ -283,7 +278,7 @@ public class TicketService {
      * @return updated ticket as {@link TicketResponse}
      * @throws IllegalStateException if the upload would exceed the 3-image limit
      */
-    public TicketResponse uploadImages(Long ticketId, List<MultipartFile> files) {
+    public TicketResponse uploadImages(@NonNull Long ticketId, List<MultipartFile> files) {
         IncidentTicket ticket = findTicketOrThrow(ticketId);
 
         int existing = ticket.getImageUrls().size();
@@ -304,12 +299,42 @@ public class TicketService {
     }
 
     /**
+     * Submits a rating and optional feedback for a resolved or closed ticket.
+     * Only the ticket creator is allowed to provide feedback.
+     *
+     * @param id          ticket to rate
+     * @param request     rating and feedback text
+     * @param currentUser authenticated caller
+     * @return updated ticket
+     */
+    @SuppressWarnings("null")
+    public TicketResponse submitFeedback(Long id, SubmitFeedbackRequest request, User currentUser) {
+        IncidentTicket ticket = findTicketOrThrow(id);
+
+        boolean isCreator = ticket.getCreatedBy() != null && Objects.equals(ticket.getCreatedBy().getId(), currentUser.getId());
+        if (!isCreator) {
+            throw new AccessDeniedException("Only the person who submitted the ticket can provide feedback.");
+        }
+
+        if (ticket.getStatus() != TicketStatus.RESOLVED && ticket.getStatus() != TicketStatus.CLOSED) {
+            throw new IllegalStateException("Feedback can only be provided for RESOLVED or CLOSED tickets.");
+        }
+
+        ticket.setRating(request.getRating());
+        ticket.setUserFeedback(request.getUserFeedback());
+
+        IncidentTicket updated = ticketRepository.save(ticket);
+        log.info("Feedback received for ticket #{} from user '{}'", id, currentUser.getEmail());
+        return mapToResponse(updated);
+    }
+
+    /**
      * Hard-deletes a ticket. Only ADMIN users may call this method.
      *
      * @param id          ticket to delete
      * @param currentUser must be ADMIN
      */
-    public void deleteTicket(Long id, User currentUser) {
+    public void deleteTicket(@NonNull Long id, User currentUser) {
         IncidentTicket ticket = findTicketOrThrow(id);
         
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
@@ -323,6 +348,11 @@ public class TicketService {
 
         ticketRepository.delete(ticket);
         log.info("Ticket #{} deleted by user '{}'", id, currentUser.getEmail());
+
+        // Audit
+        auditLogService.log(AuditAction.TICKET_DELETED, currentUser,
+                "Ticket #" + id + " permanently deleted",
+                "Ticket", id);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -337,7 +367,7 @@ public class TicketService {
      * @param currentUser the authenticated author
      * @return the persisted comment as {@link CommentResponse}
      */
-    public CommentResponse addComment(Long ticketId, CommentRequest request, User currentUser) {
+    public CommentResponse addComment(@NonNull Long ticketId, CommentRequest request, User currentUser) {
         IncidentTicket ticket = findTicketOrThrow(ticketId);
 
         TicketComment comment = new TicketComment();
@@ -358,6 +388,11 @@ public class TicketService {
             emailService.notifyCommentAdded(ticket, saved, currentUser);
         }
 
+        // Audit
+        auditLogService.log(AuditAction.TICKET_COMMENT_ADDED, currentUser,
+                "Comment added to Ticket #" + ticketId + " by " + currentUser.getName(),
+                "Ticket", ticketId);
+
         return mapToCommentResponse(saved);
     }
 
@@ -370,7 +405,7 @@ public class TicketService {
      * @return updated comment as {@link CommentResponse}
      * @throws AccessDeniedException if the caller is not the author or ADMIN
      */
-    public CommentResponse editComment(Long commentId, CommentRequest request, User currentUser) {
+    public CommentResponse editComment(@NonNull Long commentId, CommentRequest request, User currentUser) {
         TicketComment comment = findCommentOrThrow(commentId);
         assertOwnerOrAdmin(comment.getAuthor(), currentUser, "edit");
 
@@ -387,7 +422,7 @@ public class TicketService {
      * @param currentUser the authenticated caller
      * @throws AccessDeniedException if the caller is not the author or ADMIN
      */
-    public void deleteComment(Long commentId, User currentUser) {
+    public void deleteComment(@NonNull Long commentId, User currentUser) {
         TicketComment comment = findCommentOrThrow(commentId);
         assertOwnerOrAdmin(comment.getAuthor(), currentUser, "delete");
         commentRepository.delete(comment);
@@ -401,24 +436,23 @@ public class TicketService {
      * @return list of {@link CommentResponse}
      */
     @Transactional(readOnly = true)
-    public List<CommentResponse> getComments(Long ticketId) {
+    public org.springframework.data.domain.Page<CommentResponse> getComments(@org.springframework.lang.NonNull Long ticketId, int page, int size) {
         IncidentTicket ticket = findTicketOrThrow(ticketId);
-        return commentRepository.findByTicketOrderByCreatedAtAsc(ticket)
-                .stream()
-                .map(this::mapToCommentResponse)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").ascending());
+        return commentRepository.findByTicket(ticket, pageable)
+                .map(this::mapToCommentResponse);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Private helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    private IncidentTicket findTicketOrThrow(Long id) {
+    private IncidentTicket findTicketOrThrow(@NonNull Long id) {
         return ticketRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with id: " + id));
     }
 
-    private TicketComment findCommentOrThrow(Long id) {
+    private TicketComment findCommentOrThrow(@NonNull Long id) {
         return commentRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found with id: " + id));
     }
@@ -485,6 +519,8 @@ public class TicketService {
         response.setResourceId(ticket.getResourceId());
         response.setCreatedAt(ticket.getCreatedAt());
         response.setUpdatedAt(ticket.getUpdatedAt());
+        response.setRating(ticket.getRating());
+        response.setUserFeedback(ticket.getUserFeedback());
 
         if (ticket.getCreatedBy() != null) {
             response.setCreatedByName(ticket.getCreatedBy().getName());

@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ticketService from "../../services/ticketService";
 import { useAuth } from "../../context/AuthContext";
 import StatusBadge from "./StatusBadge";
 import CommentSection from "./CommentSection";
 import { ArrowLeft, Clock, MapPin, User, Tag, Key, CheckCircle2, AlertCircle, Wrench, Calendar, Trash2, Image as ImageIcon, Pencil } from "lucide-react";
+
+/**
+ * Simple in-memory cache for ticket details to provide instant loading on return.
+ */
+const detailsCache = {};
 
 /**
  * Renders full ticket details. Used by User, Admin, and Technician.
@@ -15,8 +20,8 @@ const TicketDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  const [ticket, setTicket] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [ticket, setTicket] = useState(detailsCache[id] || null);
+  const [isLoading, setIsLoading] = useState(!detailsCache[id]);
   const [error, setError] = useState(null);
   
   // Status update state
@@ -30,20 +35,27 @@ const TicketDetail = () => {
   const [isAssigning, setIsAssigning] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchTicket = async () => {
+  // Feedback state
+  const [userRating, setUserRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+
+  const fetchTicket = useCallback(async () => {
     try {
       const { data } = await ticketService.getById(id);
       setTicket(data);
       setNewStatus(data.status);
+      detailsCache[id] = data; // Update cache
     } catch (err) {
       console.error(err);
       setError("Failed to load ticket details.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
 
-  const fetchTechnicians = async () => {
+  const fetchTechnicians = useCallback(async () => {
     if (user?.role !== "ADMIN") return;
     try {
       const { data } = await ticketService.getTechnicians();
@@ -51,12 +63,12 @@ const TicketDetail = () => {
     } catch (err) {
       console.error("Failed to load technicians", err);
     }
-  };
+  }, [user?.role]);
 
   useEffect(() => {
     fetchTicket();
     fetchTechnicians();
-  }, [id]);
+  }, [fetchTicket, fetchTechnicians]);
 
   const handleUpdateStatus = async (e) => {
     e.preventDefault();
@@ -103,13 +115,32 @@ const TicketDetail = () => {
     }
   };
 
+  const handleSubmitFeedback = async (e) => {
+    e.preventDefault();
+    if (userRating === 0) {
+      alert("Please select a rating");
+      return;
+    }
+    setIsSubmittingFeedback(true);
+    try {
+      await ticketService.submitFeedback(id, userRating, feedbackText);
+      setFeedbackSuccess(true);
+      await fetchTicket();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to submit feedback");
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
   if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading ticket details...</div>;
   if (error) return <div className="p-8 text-center text-rose-500">{error}</div>;
   if (!ticket) return null;
 
   const role = user?.role || "USER";
-  const isAdmin = role === "ADMIN";
-  const isTechnician = role === "TECHNICIAN";
+  const isAdmin = role === "ADMIN" || role === "ROLE_ADMIN";
+  const isTechnician = role === "TECHNICIAN" || role === "ROLE_TECHNICIAN";
+  const isManager = role === "MANAGER" || role === "ROLE_MANAGER";
   const canUpdateStatus = isAdmin || isTechnician;
 
   // The baseUrl for uploaded files. Assuming Spring Boot runs on 8081 and serves static content.
@@ -237,6 +268,7 @@ const TicketDetail = () => {
                        <img 
                          src={fullUrl} 
                          alt={`Attachment ${i}`}
+                         loading="lazy"
                          className="w-full h-full object-cover px-1"
                          onError={(e) => { e.target.src = "https://placehold.co/300?text=Image+Not+Found" }}
                        />
@@ -258,6 +290,76 @@ const TicketDetail = () => {
                </h3>
                <p className="text-sm text-emerald-900/80 whitespace-pre-wrap">{ticket.resolutionNotes}</p>
              </div>
+          )}
+
+          {/* Feedback Section */}
+          {['RESOLVED', 'CLOSED'].includes(ticket.status) && (
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 overflow-hidden relative">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                  <CheckCircle2 size={20} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800">Service Feedback</h3>
+              </div>
+
+              {ticket.rating ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <CheckCircle2 
+                        key={star} 
+                        size={20} 
+                        className={star <= ticket.rating ? "text-amber-500 fill-amber-500" : "text-slate-200"} 
+                      />
+                    ))}
+                    <span className="ml-3 text-sm font-bold text-slate-700">You rated this {ticket.rating}/5</span>
+                  </div>
+                  {ticket.userFeedback && (
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 italic text-slate-600 text-sm">
+                      "{ticket.userFeedback}"
+                    </div>
+                  )}
+                </div>
+              ) : ticket.createdById === user?.id ? (
+                feedbackSuccess ? (
+                  <div className="py-4 text-center">
+                    <p className="text-emerald-600 font-bold">Thank you for your feedback! It helps us improve our service.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmitFeedback} className="space-y-4">
+                    <p className="text-sm text-slate-500 mb-4">How would you rate the resolution of this ticket?</p>
+                    <div className="flex items-center gap-3">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setUserRating(star)}
+                          className={`p-2 transition-all hover:scale-110 ${userRating >= star ? "text-amber-500" : "text-slate-300"}`}
+                        >
+                          <CheckCircle2 size={32} className={userRating >= star ? "fill-amber-500" : ""} />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
+                      placeholder="Any additional comments on the service?"
+                      rows="3"
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                    ></textarea>
+                    <button
+                      type="submit"
+                      disabled={isSubmittingFeedback || userRating === 0}
+                      className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-200 disabled:opacity-50"
+                    >
+                      {isSubmittingFeedback ? "Submitting..." : "Submit Feedback"}
+                    </button>
+                  </form>
+                )
+              ) : (
+                <p className="text-sm text-slate-400 italic">No feedback provided yet by the reporter.</p>
+              )}
+            </div>
           )}
 
           {/* Comments */}

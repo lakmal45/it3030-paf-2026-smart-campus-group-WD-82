@@ -1,10 +1,12 @@
 package com.project.paf.ticket;
 
+import com.project.paf.modules.auditlog.AuditLogService;
 import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
-import com.smartcampus.notification.NotificationService;
+import com.project.paf.modules.notification.service.AppNotificationService;
+import com.project.paf.modules.notification.service.EmailService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,7 @@ import static org.mockito.Mockito.*;
  */
 @Slf4j
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
 public class TicketServiceTest {
 
     @Mock
@@ -39,10 +42,16 @@ public class TicketServiceTest {
     private FileStorageService fileStorageService;
 
     @Mock
-    private NotificationService notificationService;
+    private EmailService emailService;
+    
+    @Mock
+    private AppNotificationService appNotificationService;
 
     @Mock
     private UserRepository userRepository;
+    
+    @Mock
+    private AuditLogService auditLogService;
 
     @InjectMocks
     private TicketService ticketService;
@@ -77,7 +86,6 @@ public class TicketServiceTest {
     }
 
     @Test
-    @SuppressWarnings("null")
     void createTicket_ShouldSetStatusToOpen() {
         log.info("Running createTicket_ShouldSetStatusToOpen...");
         CreateTicketRequest request = new CreateTicketRequest();
@@ -92,14 +100,15 @@ public class TicketServiceTest {
         });
 
         TicketResponse response = ticketService.createTicket(request, regularUser);
-
+        
         assertNotNull(response);
         assertEquals(TicketStatus.OPEN, response.getStatus());
         verify(ticketRepository, times(1)).save(any(IncidentTicket.class));
+        verify(emailService, times(1)).notifyTicketCreated(any());
+        verify(emailService, times(1)).notifyAdminsAndManagersNewTicket(any(), any());
     }
 
     @Test
-    @SuppressWarnings("null")
     void updateTicketStatus_ValidTransition_ShouldSucceed() {
         log.info("Running updateTicketStatus_ValidTransition_ShouldSucceed...");
         UpdateTicketStatusRequest request = new UpdateTicketStatusRequest();
@@ -109,14 +118,13 @@ public class TicketServiceTest {
         when(ticketRepository.save(any(IncidentTicket.class))).thenReturn(openTicket);
 
         TicketResponse response = ticketService.updateTicketStatus(10L, request, adminUser);
-
+ 
         assertEquals(TicketStatus.IN_PROGRESS, response.getStatus());
         verify(ticketRepository, times(1)).save(openTicket);
-        verify(notificationService, times(1)).sendNotification(any(), anyString(), eq("TICKET_UPDATE"));
+        verify(emailService, times(1)).notifyStatusChange(any(), any());
     }
 
     @Test
-    @SuppressWarnings("null")
     void updateTicketStatus_InvalidTransition_ShouldThrowIllegalStateException() {
         log.info("Running updateTicketStatus_InvalidTransition_ShouldThrowIllegalStateException...");
         openTicket.setStatus(TicketStatus.CLOSED);
@@ -140,7 +148,6 @@ public class TicketServiceTest {
     }
 
     @Test
-    @SuppressWarnings("null")
     void assignTechnician_ShouldSetStatusToInProgress_WhenCurrentlyOpen() {
         log.info("Running assignTechnician_ShouldSetStatusToInProgress_WhenCurrentlyOpen...");
         
@@ -149,10 +156,10 @@ public class TicketServiceTest {
         when(ticketRepository.save(any(IncidentTicket.class))).thenReturn(openTicket);
 
         TicketResponse response = ticketService.assignTechnician(10L, 3L, adminUser);
-
+ 
         assertEquals(TicketStatus.IN_PROGRESS, response.getStatus());
         assertEquals(technicianUser.getId(), response.getAssignedTechnicianId());
-        verify(notificationService, times(1)).sendNotification(eq(technicianUser), anyString(), eq("TICKET_UPDATE"));
+        verify(appNotificationService, times(1)).createNotification(eq(technicianUser), anyString(), anyString(), anyString());
     }
 
     @Test
@@ -179,7 +186,6 @@ public class TicketServiceTest {
     }
 
     @Test
-    @SuppressWarnings("null")
     void addComment_ShouldTriggerNotification_WhenCommenterIsNotOwner() {
         log.info("Running addComment_ShouldTriggerNotification_WhenCommenterIsNotOwner...");
         CommentRequest request = new CommentRequest();
@@ -194,12 +200,8 @@ public class TicketServiceTest {
         when(commentRepository.save(any(TicketComment.class))).thenReturn(savedComment);
 
         ticketService.addComment(10L, request, adminUser);
-
-        verify(notificationService, times(1)).sendNotification(
-                eq(regularUser),
-                contains("New comment added"),
-                eq("COMMENT_ADDED")
-        );
+ 
+        verify(emailService, times(1)).notifyCommentAdded(any(), any(), any());
     }
 
     @Test

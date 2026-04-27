@@ -21,7 +21,6 @@ import java.util.UUID;
 /**
  * Service for handling image uploads, applying compression, and storing images in Supabase Storage.
  */
-@SuppressWarnings("null")
 @Service
 public class FileStorageService {
 
@@ -86,7 +85,7 @@ public class FileStorageService {
             HttpEntity<byte[]> requestEntity = new HttpEntity<>(imageBytes, headers);
             
             try {
-                ResponseEntity<String> response = restTemplate.exchange(bucketUrl, HttpMethod.POST, requestEntity, String.class);
+                ResponseEntity<String> response = restTemplate.exchange(bucketUrl, java.util.Objects.requireNonNull(HttpMethod.POST), requestEntity, String.class);
                 if (!response.getStatusCode().is2xxSuccessful()) {
                     throw new RuntimeException("Supabase upload failed status: " + response.getStatusCode());
                 }

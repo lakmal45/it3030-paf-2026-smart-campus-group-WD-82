@@ -23,17 +23,29 @@ const CreateTicketForm = () => {
   const [status, setStatus] = useState({ type: "", message: "" }); // type: 'error' | 'success'
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Debounced search for resources
   React.useEffect(() => {
-    const fetchResources = async () => {
+    if (!searchTerm.trim()) {
+      setResources([]);
+      return;
+    }
+    const delayDebounceFn = setTimeout(async () => {
+      setIsSearching(true);
       try {
-        const data = await resourceService.getAllResources();
+        const data = await resourceService.getFilteredResources({ name: searchTerm });
         setResources(data);
       } catch (err) {
-        console.error("Failed to load resources", err);
+        console.error("Search failed", err);
+      } finally {
+        setIsSearching(false);
       }
-    };
-    fetchResources();
-  }, []);
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -61,25 +73,22 @@ const CreateTicketForm = () => {
     setStatus({ type: "", message: "" });
     setIsSubmitting(true);
 
-    let createdTicketId = null;
-
-    try {
-      // 1. Create ticket
-      const { data } = await ticketService.create(formData);
-      createdTicketId = data.id;
-    } catch (err) {
-      console.error(err);
-      setStatus({ 
-        type: "error", 
-        message: err.response?.data?.message || err.response?.data?.error || "Failed to create ticket. Please try again." 
-      });
+    if (!formData.resourceId) {
+      setStatus({ type: "error", message: "Please search and select a location/room before submitting." });
       setIsSubmitting(false);
       return;
     }
 
     try {
-      // 2. Upload images if any
+      // 1. Create ticket
+      const { data } = await ticketService.create(formData);
+      const createdTicketId = data.id;
+
+      // 2. Upload images in parallel if any
       if (files.length > 0) {
+        // Since the backend handles 'files' as a list, we can still use the single uploadImages call,
+        // but if we were using multiple individual calls, we'd use Promise.all.
+        // For now, let's at least ensure we don't block UI unnecessarily.
         await ticketService.uploadImages(createdTicketId, files);
       }
 
@@ -92,10 +101,9 @@ const CreateTicketForm = () => {
 
     } catch (err) {
       console.error(err);
-      const backendError = err.response?.data?.message || err.response?.data?.error || err.message;
       setStatus({ 
         type: "error", 
-        message: `Ticket created successfully, but image upload failed: ${backendError}. Please try re-uploading the image.` 
+        message: err.response?.data?.message || err.response?.data?.error || "An error occurred. Please try again." 
       });
       setIsSubmitting(false);
     }
@@ -123,23 +131,67 @@ const CreateTicketForm = () => {
           {/* Location / Resource Select */}
           <div className="col-span-1 md:col-span-2">
             <label className="block text-sm font-bold text-slate-700 mb-2">Location / Room <span className="text-rose-500">*</span></label>
-            <select
-              required
-              name="resourceSelect"
-              value={formData.resourceId}
-              onChange={handleResourceChange}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50"
-            >
-              <option value="">Select a Location/Room</option>
-              {resources.map(res => (
-                <option key={res.id} value={res.id}>
-                  {res.name} ({res.location})
-                </option>
-              ))}
-            </select>
-            {formData.location && (
-              <p className="mt-2 text-xs text-indigo-600 font-medium">Selected: {formData.location}</p>
+            
+            {formData.resourceId ? (
+              /* Selected Resource View */
+              <div className="flex items-center justify-between p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+                    <CheckCircle2 size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-indigo-900 text-sm">{formData.location}</h4>
+                    <p className="text-xs text-indigo-600">Resource ID: {formData.resourceId}</p>
+                  </div>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, location: "", resourceId: "" }));
+                    setSearchTerm("");
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"
+                >
+                  Change Location
+                </button>
+              </div>
+            ) : (
+              /* Search & Select View */
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    placeholder="Search room (e.g. Lab 101, Office...)"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50"
+                  />
+                  {isSearching && (
+                    <div className="absolute right-3 top-3.5">
+                      <div className="w-4 h-4 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                </div>
+                <select
+                  required
+                  name="resourceId"
+                  value={formData.resourceId}
+                  onChange={handleResourceChange}
+                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-white"
+                >
+                  <option value="">{searchTerm ? (resources.length > 0 ? "Select from results" : "No results found") : "Start typing to search"}</option>
+                  {resources.map(res => (
+                    <option key={res.id} value={res.id}>
+                      {res.name} ({res.location})
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
+            
+            <p className="mt-2 text-[10px] text-slate-400 font-medium italic">
+              * Official campus locations must be selected from the resource catalogue.
+            </p>
           </div>
 
           {/* Category */}
@@ -199,17 +251,6 @@ const CreateTicketForm = () => {
                   onChange={handleChange}
                   placeholder="e.g. Phone number"
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50"
-                />
-             </div>
-             <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Resource ID <span className="font-normal text-slate-400">(Auto-filled)</span></label>
-                <input
-                  type="text"
-                  name="resourceId"
-                  value={formData.resourceId}
-                  readOnly
-                  placeholder="Select a location above"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
                 />
              </div>
           </div>

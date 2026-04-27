@@ -35,8 +35,15 @@ const Login = () => {
       console.log("🟢 Backend Response Data:", res.data);
 
       if (res.data && res.data.role) {
-        // Just call login. The useEffect above will instantly catch the change and navigate.
-        login(res.data);
+        // Force 'ADMIN' role for the primary admin email to ensure UI consistency
+        const effectiveRole = res.data.email === "admin@campus.com" ? "ADMIN" : res.data.role;
+        
+        // Explicitly set role for simple checks in components
+        localStorage.setItem("role", effectiveRole);
+        
+        // Update the user object with the effective role before logging in
+        const userToLogin = { ...res.data, role: effectiveRole };
+        login(userToLogin);
       } else {
         alert("Login failed: The server did not return user details.");
       }
