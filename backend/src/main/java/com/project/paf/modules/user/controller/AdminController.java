@@ -2,6 +2,7 @@ package com.project.paf.modules.user.controller;
 
 import com.project.paf.modules.auditlog.AuditAction;
 import com.project.paf.modules.auditlog.AuditLogService;
+import com.project.paf.modules.notification.service.EmailService;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
@@ -26,11 +27,14 @@ public class AdminController {
     private final UserRepository repo;
     private final PasswordEncoder encoder;
     private final AuditLogService auditLogService;
+    private final EmailService emailService;
 
-    public AdminController(UserRepository repo, PasswordEncoder encoder, AuditLogService auditLogService) {
+    public AdminController(UserRepository repo, PasswordEncoder encoder,
+                           AuditLogService auditLogService, EmailService emailService) {
         this.repo = repo;
         this.encoder = encoder;
         this.auditLogService = auditLogService;
+        this.emailService = emailService;
     }
 
     /**
@@ -105,6 +109,9 @@ public class AdminController {
                 "User '" + user.getName() + "' (" + user.getEmail() + ") role changed to " + role,
                 "User", id);
 
+        // Send email and in-app notification to the user about their role change
+        emailService.notifyRoleChanged(saved, saved.getRole().name());
+
         return ResponseEntity.ok(saved);
     }
 
@@ -145,8 +152,13 @@ public class AdminController {
         String email = body.get("email");
         String role  = body.get("role");
 
-        if (name == null || name.isBlank() || email == null || email.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name and email are required");
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
+        }
+
+        // If name was not provided, derive it from the email prefix (e.g. "john.doe" from "john.doe@uni.edu")
+        if (name == null || name.isBlank()) {
+            name = email.contains("@") ? email.substring(0, email.indexOf("@")) : email;
         }
 
         // Check duplicate email
@@ -165,13 +177,16 @@ public class AdminController {
 
         User saved = repo.save(user);
 
-        // Return saved user info + the plain-text password (shown once to admin)
+        // Email the temporary password directly to the new user — admin never sees it
+        emailService.notifyAdminCreatedUser(
+                saved.getName(), saved.getEmail(), plainPassword, saved.getRole().name());
+
+        // Return only safe fields — password is NOT included in the response
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("id", saved.getId());
         response.put("name", saved.getName());
         response.put("email", saved.getEmail());
         response.put("role", saved.getRole().name());
-        response.put("generatedPassword", plainPassword);
 
         User admin = resolveActingUser(session, emailHeader);
         auditLogService.log(AuditAction.USER_CREATED, admin,

@@ -1,8 +1,8 @@
-import { Bell, CheckCircle2, AlertCircle, Info, AlertTriangle, CheckCheck } from "lucide-react";
+import { Bell, CheckCircle2, AlertCircle, Info, AlertTriangle, CheckCheck, Trash2 } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
 
 const NotificationsPage = () => {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, loading } = useNotifications();
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -28,7 +28,12 @@ const NotificationsPage = () => {
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        {notifications.length > 0 ? (
+        {loading ? (
+          <div className="py-24 flex flex-col items-center justify-center text-center">
+            <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4" />
+            <p className="text-sm font-medium text-slate-400">Loading notifications...</p>
+          </div>
+        ) : notifications.length > 0 ? (
           <div className="divide-y divide-slate-100">
             {notifications.map((notification) => {
               const getIcon = () => {
@@ -64,15 +69,24 @@ const NotificationsPage = () => {
                         {notification.message}
                       </p>
                       
-                      {!notification.read && (
+                      <div className="flex items-center gap-4 mt-4">
+                        {!notification.read && (
+                          <button 
+                            onClick={() => markAsRead(notification.id)}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1"
+                          >
+                            <CheckCircle2 size={14} />
+                            MARK AS READ
+                          </button>
+                        )}
                         <button 
-                          onClick={() => markAsRead(notification.id)}
-                          className="mt-4 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1"
+                          onClick={() => deleteNotification(notification.id)}
+                          className="text-xs font-bold text-rose-500 hover:text-rose-700 transition-colors flex items-center gap-1"
                         >
-                          <CheckCircle2 size={14} />
-                          MARK AS READ
+                          <Trash2 size={14} />
+                          DELETE
                         </button>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </div>
