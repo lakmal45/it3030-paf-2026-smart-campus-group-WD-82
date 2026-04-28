@@ -124,7 +124,7 @@ function App() {
                 <Route
                   path="create-booking"
                   element={
-                    <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <ProtectedRoute allowedRoles={["USER", "ROLE_USER", "ADMIN", "ROLE_ADMIN", "MANAGER", "ROLE_MANAGER"]}>
                       <CreateBooking />
                     </ProtectedRoute>
                   }

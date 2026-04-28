@@ -568,6 +568,80 @@ public final class EmailTemplates {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Admin Created User — Credentials Email
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Builds the HTML email body sent to a new user when an admin creates their account.
+     * Contains their temporary password so they can log in immediately.
+     *
+     * @param name          the new user's display name
+     * @param email         the new user's email address
+     * @param tempPassword  the system-generated temporary password
+     * @param role          the assigned role (e.g. "USER", "TECHNICIAN")
+     * @return HTML string
+     */
+    public static String adminCreatedUser(String name, String email, String tempPassword, String role) {
+        String roleBadgeClass = switch (role.toUpperCase()) {
+            case "ADMIN"      -> "badge-resolved";
+            case "MANAGER"    -> "badge-open";
+            case "TECHNICIAN" -> "badge-progress";
+            default           -> "badge-closed";
+        };
+
+        return """
+                <!DOCTYPE html><html><head>%s</head><body>
+                <div class="wrapper">
+                  <div class="header">
+                    <h1>🏫 You've Been Added to Smart Campus</h1>
+                    <p>Your account is ready — log in to get started</p>
+                  </div>
+                  <div class="body">
+                    <p>Hi <strong>%s</strong>,</p>
+                    <p>An administrator has created a Smart Campus account for you.
+                       Your login credentials are below — please keep them safe and
+                       <strong>change your password</strong> after your first login.</p>
+                    <div class="ticket-card" style="border-left-color:#7c3aed;background:#faf5ff;">
+                      <table>
+                        <tr><td>Email</td><td><strong>%s</strong></td></tr>
+                        <tr><td>Temporary Password</td><td>
+                          <span style="font-family:monospace;font-size:16px;font-weight:700;
+                                       letter-spacing:2px;background:#ede9fe;padding:4px 10px;
+                                       border-radius:6px;color:#5b21b6;">%s</span>
+                        </td></tr>
+                        <tr><td>Role</td><td><span class="badge %s">%s</span></td></tr>
+                      </table>
+                    </div>
+                    <p style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;
+                               padding:12px 16px;font-size:14px;color:#9a3412;">
+                      ⚠ <strong>Important:</strong> This is a temporary password generated for your account.
+                      Please log in and change it as soon as possible from your profile settings.
+                    </p>
+                    <p>You can also log in with Google if your email is a Gmail address — in that case
+                       you don't need this password at all.</p>
+                    <p>With Smart Campus you can:</p>
+                    <ul style="color:#374151;font-size:15px;line-height:1.8;padding-left:20px;">
+                      <li>Submit and track maintenance &amp; incident tickets</li>
+                      <li>Browse and reserve campus resources</li>
+                      <li>Stay updated with real-time status notifications</li>
+                    </ul>
+                    <p>If you have any questions, contact the campus support team.</p>
+                  </div>
+                  <div class="footer">
+                    <p>Smart Campus · IT3030 Project · This is an automated notification — please do not reply.</p>
+                  </div>
+                </div>
+                </body></html>
+                """.formatted(
+                STYLE,
+                name,
+                email,
+                tempPassword,
+                roleBadgeClass, role
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Booking — Cancelled
     // ─────────────────────────────────────────────────────────────────────────
 

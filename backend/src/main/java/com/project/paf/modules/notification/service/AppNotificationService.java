@@ -89,17 +89,16 @@ public class AppNotificationService {
         notificationRepository.save(notification);
     }
 
-    /**
-     * Marks all unread notifications for a user as read.
-     */
     public void markAllAsRead(User user) {
-        List<Notification> notifications = notificationRepository.findByTargetUserOrderByCreatedAtDesc(user);
-        for (Notification n : notifications) {
-            if (!n.isRead()) {
-                n.setRead(true);
-            }
-        }
-        notificationRepository.saveAll(java.util.Objects.requireNonNull(notifications));
+        notificationRepository.markAllAsReadForUser(user);
+    }
+
+    /**
+     * Deletes a specific notification.
+     * Verifies that the notification belongs to the calling user.
+     */
+    public void deleteNotification(@NonNull Long notificationId, User user) {
+        notificationRepository.deleteByIdAndTargetUser(notificationId, user);
     }
 
     private NotificationResponse mapToResponse(Notification notification) {

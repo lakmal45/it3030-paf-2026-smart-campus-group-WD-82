@@ -6,11 +6,9 @@ import com.project.paf.modules.resource.model.ResourceStatus;
 import com.project.paf.modules.resource.service.ResourceService;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
-import com.project.paf.modules.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,45 +24,35 @@ import java.util.List;
 public class ResourceController {
 
     private final ResourceService resourceService;
-    private final UserRepository userRepository;
-
-    public ResourceController(ResourceService resourceService, UserRepository userRepository) {
+    
+    public ResourceController(ResourceService resourceService) {
         this.resourceService = resourceService;
-        this.userRepository = userRepository;
     }
 
     /**
      * Hand-rolled Security Guard: aligns with the app's established pattern.
      */
-    private void requireAdmin(HttpSession session, String emailHeader) {
-        User resolved = null;
-        
-        // ── 1. Check session ──────────────────────────────────────────────
-        Object sessionAttr = session.getAttribute("user");
-        if (sessionAttr instanceof User) {
-            resolved = (User) sessionAttr;
-        }
+    private void requireAdminOrManager() {
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
 
-        // ── 2. Check email header fallback ────────────────────────────────
-        if (resolved == null && emailHeader != null && !emailHeader.isBlank()) {
-            resolved = userRepository.findByEmail(emailHeader).orElse(null);
-            
-            // Fallback: If this is the master admin email but not in DB yet, grant virtual access
-            if (resolved == null && emailHeader.equalsIgnoreCase("admin@campus.com")) {
-                resolved = new User();
-                resolved.setEmail("admin@campus.com");
-                resolved.setRole(Role.ADMIN);
-            }
-        }
-
-        if (resolved == null) {
+        if (auth == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: No valid identity found.");
         }
 
-        // ── 3. Final Role Check ───────────────────────────────────────────
-        boolean isMasterAdmin = resolved.getEmail().equalsIgnoreCase("admin@campus.com");
-        if (!isMasterAdmin && resolved.getRole() != Role.ADMIN) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Admin status required.");
+        // Check authorities for ROLE_ADMIN or ROLE_MANAGER (most reliable)
+        boolean isAuthorized = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_MANAGER"));
+
+        // Fallback: Check the User object directly if authorities aren't properly mapped
+        if (!isAuthorized && auth.getPrincipal() instanceof User) {
+            User user = (User) auth.getPrincipal();
+            isAuthorized = user.getEmail().equalsIgnoreCase("admin@campus.com") || 
+                          (user.getRole() != null && (user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER));
+        }
+
+        if (!isAuthorized) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Admin or Manager status required.");
         }
     }
 
@@ -88,10 +76,8 @@ public class ResourceController {
     @ApiResponse(responseCode = "201", description = "Resource created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data")
     public ResponseEntity<ResourceResponseDTO> createResource(
-            @Valid @RequestBody ResourceRequestDTO requestDTO,
-            HttpSession session,
-            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
-        requireAdmin(session, emailHeader);
+            @Valid @RequestBody ResourceRequestDTO requestDTO) {
+        requireAdminOrManager();
         ResourceResponseDTO created = resourceService.createResource(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -102,10 +88,8 @@ public class ResourceController {
     @ApiResponse(responseCode = "404", description = "Resource not found")
     public ResponseEntity<ResourceResponseDTO> updateResource(
             @PathVariable @NonNull Long id, 
-            @Valid @RequestBody ResourceRequestDTO requestDTO,
-            HttpSession session,
-            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
-        requireAdmin(session, emailHeader);
+            @Valid @RequestBody ResourceRequestDTO requestDTO) {
+        requireAdminOrManager();
         return ResponseEntity.ok(resourceService.updateResource(id, requestDTO));
     }
 
@@ -114,10 +98,8 @@ public class ResourceController {
     @ApiResponse(responseCode = "204", description = "Resource deleted successfully")
     @ApiResponse(responseCode = "404", description = "Resource not found")
     public ResponseEntity<Void> deleteResource(
-            @PathVariable @NonNull Long id,
-            HttpSession session,
-            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
-        requireAdmin(session, emailHeader);
+            @PathVariable @NonNull Long id) {
+        requireAdminOrManager();
         resourceService.deleteResource(id);
         return ResponseEntity.noContent().build();
     }
@@ -140,11 +122,8 @@ public class ResourceController {
     @ApiResponse(responseCode = "200", description = "Status updated successfully")
     public ResponseEntity<ResourceResponseDTO> updateStatus(
             @PathVariable @NonNull Long id,
-            @RequestParam ResourceStatus status,
-            HttpSession session,
-            @RequestHeader(value = "X-User-Email", required = false) String emailHeader
-    ) {
-        requireAdmin(session, emailHeader);
+            @RequestParam ResourceStatus status) {
+        requireAdminOrManager();
         return ResponseEntity.ok(resourceService.updateResourceStatus(id, status));
     }
 }

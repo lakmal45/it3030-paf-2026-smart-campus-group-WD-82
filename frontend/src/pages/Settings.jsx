@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   changePassword,
@@ -341,19 +342,6 @@ const Settings = () => {
                   </button>
                 </div>
 
-                {/* Per-row inline feedback */}
-                {notifSuccess[pref.id] && (
-                  <div className="mx-4 mb-3 px-3 py-2 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl flex items-center gap-2 text-xs animate-slide-up">
-                    <CheckCircle2 size={13} />
-                    <span className="font-medium">{notifSuccess[pref.id]}</span>
-                  </div>
-                )}
-                {notifError[pref.id] && (
-                  <div className="mx-4 mb-3 px-3 py-2 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl flex items-center gap-2 text-xs animate-slide-up">
-                    <AlertTriangle size={13} />
-                    <span className="font-medium">{notifError[pref.id]}</span>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -383,6 +371,37 @@ const Settings = () => {
           </div>
         </section>
       </div>
+
+      {/* Toast Notifications for Preferences */}
+      {createPortal(
+        <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none">
+          {Object.entries(notifSuccess).map(([key, msg]) => {
+            if (!msg) return null;
+            return (
+              <div key={`success-${key}`} className="bg-emerald-500 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-up min-w-[300px] pointer-events-auto">
+                <CheckCircle2 size={20} className="text-white" />
+                <span className="font-bold text-sm flex-1">{msg}</span>
+                <button onClick={() => setNotifSuccess(prev => ({...prev, [key]: null}))} className="text-emerald-100 hover:text-white transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+            );
+          })}
+          {Object.entries(notifError).map(([key, msg]) => {
+            if (!msg) return null;
+            return (
+              <div key={`error-${key}`} className="bg-rose-500 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-up min-w-[300px] pointer-events-auto">
+                <AlertTriangle size={20} className="text-white" />
+                <span className="font-bold text-sm flex-1">{msg}</span>
+                <button onClick={() => setNotifError(prev => ({...prev, [key]: null}))} className="text-rose-100 hover:text-white transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+            );
+          })}
+        </div>,
+        document.body
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
