@@ -106,19 +106,32 @@ export default function ActivityLog() {
   }, [search]);
 
   // ---------- CSV export ----------
-  const exportCSV = () => {
-    const rows = [["ID","Timestamp","Category","Action","Actor","Role","Description","Entity","Entity ID"]];
-    logs.forEach(l => rows.push([
-      l.id, l.createdAt, l.category, l.actionLabel,
-      l.actorName, l.actorRole,
-      `"${(l.targetDescription||"").replace(/"/g,'""')}"`,
-      l.entityType, l.entityId
-    ]));
-    const blob = new Blob([rows.map(r => r.join(",")).join("\n")], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `audit-log-${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
+  const exportCSV = async () => {
+    try {
+      const params = { page: 0, size: 100000 };
+      if (category && category !== "ALL") params.category = category;
+      if (search.trim()) params.search = search.trim();
+      if (from) params.from = from;
+      if (to)   params.to   = to;
+
+      const res = await api.get("/admin/audit-logs", { params });
+      const allLogs = res.data.content || [];
+
+      const rows = [["ID","Timestamp","Category","Action","Actor","Role","Description","Entity","Entity ID"]];
+      allLogs.forEach(l => rows.push([
+        l.id, l.createdAt, l.category, l.actionLabel,
+        l.actorName, l.actorRole,
+        `"${(l.targetDescription||"").replace(/"/g,'""')}"`,
+        l.entityType, l.entityId
+      ]));
+      const blob = new Blob([rows.map(r => r.join(",")).join("\n")], { type: "text/csv" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `audit-log-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    } catch (e) {
+      setError("Failed to export all logs");
+    }
   };
 
   const resetFilters = () => { setCategory("ALL"); setSearch(""); setFrom(""); setTo(""); };
@@ -148,7 +161,7 @@ export default function ActivityLog() {
             disabled={logs.length === 0}
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-sm hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 transition-all"
           >
-            <Download size={15} /> Export CSV
+            <Download size={15} /> Export All CSV
           </button>
         </div>
       </div>

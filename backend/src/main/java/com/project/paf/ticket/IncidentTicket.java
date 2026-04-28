@@ -104,6 +104,9 @@ public class IncidentTicket {
     @Column(name = "user_feedback", length = 1000)
     private String userFeedback;
 
+    @Column(name = "is_escalated", nullable = false, columnDefinition = "boolean default false")
+    private boolean isEscalated = false;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -29,7 +29,6 @@ import static org.mockito.Mockito.*;
  */
 @Slf4j
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings("null")
 public class TicketServiceTest {
 
     @Mock
@@ -205,10 +204,11 @@ public class TicketServiceTest {
     }
 
     @Test
-    void deleteTicket_ByNonAdmin_ShouldThrowAccessDeniedException() {
-        log.info("Running deleteTicket_ByNonAdmin_ShouldThrowAccessDeniedException...");
+    void deleteTicket_ByUnrelatedUser_ShouldThrowAccessDeniedException() {
+        log.info("Running deleteTicket_ByUnrelatedUser_ShouldThrowAccessDeniedException...");
         when(ticketRepository.findById(10L)).thenReturn(Optional.of(openTicket));
 
+        // Technician who is NOT the creator and NOT assigned to this ticket should be denied
         assertThrows(AccessDeniedException.class, () -> ticketService.deleteTicket(10L, technicianUser));
     }
 
