@@ -29,6 +29,7 @@ import static org.mockito.Mockito.*;
  */
 @Slf4j
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
 public class TicketServiceTest {
 
     @Mock
