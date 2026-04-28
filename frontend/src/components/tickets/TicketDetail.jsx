@@ -462,21 +462,34 @@ const TicketDetail = () => {
            )}
 
            {/* Delete Ticket Button Section */}
-           {(isAdmin || (ticket.createdById === user?.id && ticket.status === 'OPEN')) && (
-             <div className="bg-rose-50 rounded-3xl p-6 border border-rose-100/50">
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl transition-all shadow-md shadow-rose-200 flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <Trash2 size={18} />
-                  {isDeleting ? "Deleting..." : "Delete Ticket"}
-                </button>
-                <p className="text-[10px] text-rose-400 text-center mt-3 font-medium">
-                  {isAdmin ? "Admin privilege: Hard delete" : "This will permanently remove the ticket."}
-                </p>
-             </div>
-           )}
+           {(() => {
+              const isCreator = ticket.createdById === user?.id;
+              const isAssignedTech = isTechnician && ticket.assignedTechnicianId === user?.id;
+              const canDelete = isAdmin || isManager || isAssignedTech || isCreator;
+
+              if (!canDelete) return null;
+
+              let helperText = "This will permanently remove the ticket.";
+              if (isAdmin) helperText = "Admin privilege: Hard delete any ticket";
+              else if (isManager) helperText = "Manager privilege: Delete any ticket";
+              else if (isAssignedTech) helperText = "Assigned technician: Delete this ticket";
+
+              return (
+                <div className="bg-rose-50 rounded-3xl p-6 border border-rose-100/50">
+                   <button
+                     onClick={handleDelete}
+                     disabled={isDeleting}
+                     className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl transition-all shadow-md shadow-rose-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                   >
+                     <Trash2 size={18} />
+                     {isDeleting ? "Deleting..." : "Delete Ticket"}
+                   </button>
+                   <p className="text-[10px] text-rose-400 text-center mt-3 font-medium">
+                     {helperText}
+                   </p>
+                </div>
+              );
+           })()}
         </div>
       </div>
     </div>

@@ -35,7 +35,7 @@ const ticketService = {
   assign: (id, technicianId) =>
     api.put(`/tickets/${id}/assign`, { technicianId }),
 
-  /** Hard-delete a ticket (ADMIN only). */
+  /** Hard-delete a ticket (all roles — authorization enforced server-side). */
   deleteTicket: (id) => api.delete(`/tickets/${id}`),
 
   /**
