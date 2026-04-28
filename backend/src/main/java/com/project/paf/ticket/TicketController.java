@@ -159,7 +159,7 @@ public class TicketController {
 
     /**
      * DELETE /api/tickets/{id} — Hard-delete a ticket.
-     * Only ADMIN may call this endpoint.
+     * Authorization is enforced in the service layer (all roles can delete with rules).
      */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
