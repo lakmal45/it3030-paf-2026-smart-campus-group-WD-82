@@ -7,7 +7,11 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
+import java.util.Optional;
+
 public interface ResourceRepository extends JpaRepository<Resource, Long> {
+
+    Optional<Resource> findByNameIgnoreCase(String name);
 
     List<Resource> findByNameContainingIgnoreCase(String name);
 

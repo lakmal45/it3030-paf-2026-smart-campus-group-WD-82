@@ -270,7 +270,7 @@ const ResourceCard = ({ resource, onClick }) => {
 
   return (
     <div 
-      onClick={onClick}
+      onClick={() => onClick(resource)}
       className="bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-lg hover:border-indigo-100 transition-all cursor-pointer group flex flex-col h-full"
     >
       <div className="flex justify-between items-start mb-4">
@@ -303,7 +303,13 @@ const ResourceCard = ({ resource, onClick }) => {
         </div>
       </div>
 
-      <button className="mt-4 w-full py-2 bg-slate-50 group-hover:bg-indigo-600 text-slate-600 group-hover:text-white rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-2">
+      <button 
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick(resource);
+        }}
+        className="mt-4 w-full py-2 bg-slate-50 group-hover:bg-indigo-600 text-slate-600 group-hover:text-white rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
+      >
         {avail ? "Book This Space" : "View Schedule"}
         <ChevronRight size={14} />
       </button>
@@ -720,7 +726,17 @@ const UserDashboard = () => {
               return (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {filtered.map((r) => (
-                    <ResourceCard key={r.id} resource={r} onClick={() => navigate("/dashboard/user/resources")} />
+                    <ResourceCard 
+                      key={r.id} 
+                      resource={r} 
+                      onClick={(res) => {
+                        if (res.available && res.status === 'ACTIVE') {
+                          navigate("/dashboard/user/create-booking", { state: { resourceName: res.name } });
+                        } else {
+                          navigate("/dashboard/user/resources");
+                        }
+                      }} 
+                    />
                   ))}
                 </div>
               );

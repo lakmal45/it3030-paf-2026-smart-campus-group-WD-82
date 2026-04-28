@@ -88,14 +88,16 @@ const DashboardLayout = () => {
         {/* Logo Area */}
         <div className="flex items-center justify-between md:justify-start h-20 px-6 border-b border-slate-100/80">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/30 transition-shadow">
-              <span className="text-xl font-bold text-white tracking-widest">
-                SC
-              </span>
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/30 transition-shadow">
+              <img
+                src="/src/assets/unihub.png"
+                alt="UniHub Logo"
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="flex flex-col">
               <span className="text-lg font-bold tracking-tight text-slate-800 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-                Smart Campus
+                UniHub
               </span>
               <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                 Portal

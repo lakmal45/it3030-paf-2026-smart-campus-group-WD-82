@@ -1,13 +1,45 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import bookingService from "../../services/bookingService";
+import resourceService from "../../services/resourceService";
 
 const CreateBooking = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ resource: "", date: "", startTime: "", endTime: "", reason: "" });
+  const location = useLocation();
+  const [resources, setResources] = useState([]);
+  const [formData, setFormData] = useState({ 
+    resource: location.state?.resourceName || "", 
+    date: "", 
+    startTime: "", 
+    endTime: "", 
+    reason: "" 
+  });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [isLoadingResources, setIsLoadingResources] = useState(true);
+
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const data = await resourceService.getAllResources();
+        setResources(data.filter(r => r.status === 'ACTIVE' && r.available));
+      } catch (err) {
+        console.error("Error fetching resources:", err);
+      } finally {
+        setIsLoadingResources(false);
+      }
+    };
+    fetchResources();
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const resourceParam = params.get("resource");
+    if (resourceParam) {
+      setFormData(prev => ({ ...prev, resource: resourceParam }));
+    }
+  }, [location]);
 
   const validateForm = () => {
     let newErrors = {};
@@ -60,11 +92,12 @@ const CreateBooking = () => {
               className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none ${errors.resource ? 'border-red-500 text-red-600' : 'border-slate-200 text-slate-600'}`}
               value={formData.resource}
               onChange={(e) => { setFormData({ ...formData, resource: e.target.value }); if (errors.resource) setErrors({ ...errors, resource: '' }); }}
+              disabled={isLoadingResources}
             >
-              <option value="">Select a resource to book</option>
-              <option value="Conference Room A">Conference Room A</option>
-              <option value="Auditorium">Auditorium</option>
-              <option value="Projector X1">Projector X1</option>
+              <option value="">{isLoadingResources ? "Loading..." : "Select a resource to book"}</option>
+              {resources.map(r => (
+                <option key={r.id} value={r.name}>{r.name} ({r.location})</option>
+              ))}
             </select>
             {errors.resource && <p className="text-red-500 text-xs mt-1">{errors.resource}</p>}
           </div>
@@ -125,3 +158,4 @@ const CreateBooking = () => {
 };
 
 export default CreateBooking;
+

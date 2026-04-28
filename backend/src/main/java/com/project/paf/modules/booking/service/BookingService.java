@@ -9,6 +9,8 @@ import com.project.paf.modules.notification.service.EmailService;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
+import com.project.paf.modules.resource.model.ResourceStatus;
+import com.project.paf.modules.resource.repository.ResourceRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,15 +28,18 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final EmailService emailService;
     private final UserRepository userRepository;
+    private final ResourceRepository resourceRepository;
     private final AuditLogService auditLogService;
 
     public BookingService(BookingRepository bookingRepository,
                           EmailService emailService,
                           UserRepository userRepository,
+                          ResourceRepository resourceRepository,
                           AuditLogService auditLogService) {
         this.bookingRepository = bookingRepository;
         this.emailService = emailService;
         this.userRepository = userRepository;
+        this.resourceRepository = resourceRepository;
         this.auditLogService = auditLogService;
     }
 
@@ -49,6 +54,15 @@ public class BookingService {
         if (!endTime.isAfter(startTime)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End time must be after start time");
         }
+
+        // Strict Enforcement: Resource must be in ACTIVE status to be bookable
+        resourceRepository.findByNameIgnoreCase(resource).ifPresent(res -> {
+            if (res.getStatus() != ResourceStatus.ACTIVE) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Selection Unavailable: The resource '" + resource + "' is currently " +
+                    res.getStatus().name().replace('_', ' ') + " and cannot be reserved at this time.");
+            }
+        });
 
         List<Booking> conflicts = bookingRepository.findConflictingBookings(
                 resource, date, startTime, endTime, BookingStatus.CANCELLED);
@@ -113,7 +127,7 @@ public class BookingService {
         // Check for conflicts excluding this specific booking
         List<Booking> conflicts = bookingRepository.findConflictingBookings(resource, date, startTime, endTime, BookingStatus.CANCELLED);
         boolean realConflict = conflicts.stream().anyMatch(b -> !b.getId().equals(id));
-        
+
         if (realConflict) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot update: Conflicting reservation exists.");
         }
@@ -122,7 +136,7 @@ public class BookingService {
         booking.setDate(date);
         booking.setStartTime(startTime);
         booking.setEndTime(endTime);
-        
+
         BookingStatus previousStatus = booking.getStatus();
         if (statusStr != null) {
             try {
@@ -140,13 +154,13 @@ public class BookingService {
             emailService.notifyBookingCancelled(saved, "an administrator");
         }
 
-        // Audit — determine the action from the status change
+        // Audit - determine the action from the status change
         AuditAction updateAction = (saved.getStatus() == BookingStatus.CANCELLED
                 && previousStatus != BookingStatus.CANCELLED)
                 ? AuditAction.BOOKING_CANCELLED
                 : AuditAction.BOOKING_UPDATED;
         auditLogService.log(updateAction, null,
-                "Booking #" + saved.getId() + " for '" + saved.getResource() + "' → " + saved.getStatus(),
+                "Booking #" + saved.getId() + " for '" + saved.getResource() + "' -> " + saved.getStatus(),
                 "Booking", saved.getId());
 
         return saved;

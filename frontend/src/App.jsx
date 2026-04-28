@@ -38,7 +38,6 @@ import TicketDetail from "./components/tickets/TicketDetail";
 
 // Admin Pages
 import UserManagement from "./pages/admin/UserManagement";
-import SystemSettings from "./pages/admin/SystemSettings";
 import AllTickets from "./pages/admin/AllTickets";
 import AllBookings from "./pages/admin/AllBookings";
 import ActivityLog from "./pages/admin/ActivityLog";
@@ -59,11 +58,11 @@ import History from "./pages/technician/History";
 
 // A smart component to redirect to the correct dashboard based on role
 const RoleBasedRedirect = () => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
 
   if (!user) return <Navigate to="/login" replace />;
 
-  switch (user.role?.toUpperCase()) {
+  switch (role) {
     case "ADMIN":
     case "ROLE_ADMIN":
       return <Navigate to="/dashboard/admin" replace />;
@@ -125,7 +124,7 @@ function App() {
                 <Route
                   path="create-booking"
                   element={
-                    <ProtectedRoute allowedRoles={["USER", "ROLE_USER"]}>
+                    <ProtectedRoute allowedRoles={["USER", "ROLE_USER", "ADMIN", "ROLE_ADMIN", "MANAGER", "ROLE_MANAGER"]}>
                       <CreateBooking />
                     </ProtectedRoute>
                   }
@@ -247,14 +246,6 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
                       <UserManagement />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="settings"
-                  element={
-                    <ProtectedRoute allowedRoles={["ADMIN", "ROLE_ADMIN"]}>
-                      <SystemSettings />
                     </ProtectedRoute>
                   }
                 />
