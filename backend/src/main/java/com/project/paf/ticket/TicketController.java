@@ -159,7 +159,7 @@ public class TicketController {
 
     /**
      * DELETE /api/tickets/{id} — Hard-delete a ticket.
-     * Only ADMIN may call this endpoint.
+     * Authorization is enforced in the service layer (all roles can delete with rules).
      */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -296,6 +296,26 @@ public class TicketController {
         body.put("error", "Validation Failed");
         body.put("message", ex.getMessage());
         return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    public ResponseEntity<java.util.Map<String, String>> handleValidationExceptions(org.springframework.web.bind.MethodArgumentNotValidException ex) {
+        log.error("MethodArgumentNotValidException: {}", ex.getMessage());
+        java.util.Map<String, String> body = new java.util.HashMap<>();
+        body.put("error", "Validation Failed");
+        body.put("message", ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                .reduce((a, b) -> a + ", " + b).orElse("Invalid request"));
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<java.util.Map<String, String>> handleResponseStatusException(ResponseStatusException ex) {
+        log.error("Response Status Error: {}", ex.getMessage());
+        java.util.Map<String, String> body = new java.util.HashMap<>();
+        body.put("error", ex.getReason() != null ? ex.getReason() : "Error");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(ex.getStatusCode()).body(body);
     }
 
     @ExceptionHandler(Exception.class)
