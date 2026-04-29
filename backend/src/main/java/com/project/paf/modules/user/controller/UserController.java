@@ -11,6 +11,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/user")
 @CrossOrigin(origins = "http://localhost:5173")
+@SuppressWarnings("null")
 public class UserController {
 
     private final UserService userService;
@@ -81,7 +82,7 @@ public class UserController {
         if (currentUser == null) {
             return ResponseEntity.status(401).body("Not logged in");
         }
-        userService.deleteUser(currentUser.getId());
+        userService.deleteUser(currentUser.getId(), currentUser);
         session.invalidate();
         return ResponseEntity.ok("Account deleted successfully");
     }
