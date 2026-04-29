@@ -166,6 +166,37 @@ public class EmailService {
         log.info("Role-change notification queued for '{}'", to);
     }
 
+    /**
+     * Sends a notification to the admin when they successfully create a resource.
+     */
+    @Async("emailTaskExecutor")
+    public void notifyResourceCreated(User admin, com.project.paf.modules.resource.dto.ResourceResponseDTO resource) {
+        if (admin == null || admin.getEmail() == null || admin.getEmail().isBlank()) {
+            return;
+        }
+
+        String subject = "🏫 New Resource Created: " + resource.getName();
+        String html = "<div style=\"font-family:sans-serif;color:#333;line-height:1.5;max-width:600px;\">"
+                    + "<h2 style=\"color:#4f46e5;\">Resource Created Successfully</h2>"
+                    + "<p>Hi " + (admin.getName() != null ? admin.getName() : "Admin") + ",</p>"
+                    + "<p>You have successfully created a new resource in the Smart Campus system.</p>"
+                    + "<div style=\"background-color:#f3f4f6;padding:15px;border-radius:8px;margin-top:20px;\">"
+                    + "<h3 style=\"margin-top:0;color:#111827;\">Resource Details:</h3>"
+                    + "<ul style=\"list-style:none;padding-left:0;margin-bottom:0;\">"
+                    + "<li style=\"margin-bottom:8px;\"><strong>Name:</strong> " + resource.getName() + "</li>"
+                    + "<li style=\"margin-bottom:8px;\"><strong>Type:</strong> " + resource.getType() + "</li>"
+                    + "<li style=\"margin-bottom:8px;\"><strong>Location:</strong> " + resource.getLocation() + "</li>"
+                    + "<li style=\"margin-bottom:8px;\"><strong>Capacity:</strong> " + resource.getCapacity() + "</li>"
+                    + "<li><strong>Description:</strong> " + resource.getDescription() + "</li>"
+                    + "</ul>"
+                    + "</div>"
+                    + "<p style=\"margin-top:20px;color:#6b7280;font-size:0.9em;\">Thank you for keeping our campus organized!</p>"
+                    + "</div>";
+
+        sendHtmlEmail(admin.getEmail(), admin.getName(), subject, html);
+        log.info("Resource creation email queued for admin '{}'", admin.getEmail());
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Ticket event notifications
     // ─────────────────────────────────────────────────────────────────────────

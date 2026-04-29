@@ -34,6 +34,12 @@ class ResourceServiceTest {
     @Mock
     private AuditLogService auditLogService;
 
+    @Mock
+    private com.project.paf.modules.user.repository.UserRepository userRepository;
+
+    @Mock
+    private com.project.paf.modules.notification.service.EmailService emailService;
+
     @InjectMocks
     private ResourceService resourceService;
 
