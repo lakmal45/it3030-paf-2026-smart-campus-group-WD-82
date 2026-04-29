@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { UploadCloud, X, Image as ImageIcon } from "lucide-react";
 
 /**
@@ -7,6 +7,22 @@ import { UploadCloud, X, Image as ImageIcon } from "lucide-react";
  */
 const ImageUpload = ({ files, setFiles, maxFiles = 3 }) => {
   const [error, setError] = useState("");
+  const filesRef = useRef(files);
+
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  useEffect(() => {
+    // Cleanup on unmount to prevent memory leaks
+    return () => {
+      filesRef.current.forEach((file) => {
+        if (file.preview) {
+          URL.revokeObjectURL(file.preview);
+        }
+      });
+    };
+  }, []);
 
   const handleFileChange = (e) => {
     setError("");
@@ -17,16 +33,31 @@ const ImageUpload = ({ files, setFiles, maxFiles = 3 }) => {
       return;
     }
 
-    // Filter only images
-    const validImages = selected.filter((file) => file.type.startsWith("image/"));
-    if (validImages.length !== selected.length) {
-      setError("Only image files are allowed.");
+    const validImages = [];
+    let errorMessage = "";
+
+    for (const file of selected) {
+      if (!file.type.startsWith("image/")) {
+        errorMessage = "Only image files are allowed.";
+      } else if (file.size > 5 * 1024 * 1024) {
+        errorMessage = "File exceeds 5MB limit";
+      } else {
+        file.preview = URL.createObjectURL(file);
+        validImages.push(file);
+      }
+    }
+
+    if (errorMessage) {
+      setError(errorMessage);
     }
 
     setFiles((prev) => [...prev, ...validImages].slice(0, maxFiles));
   };
 
   const removeFile = (index) => {
+    if (files[index] && files[index].preview) {
+      URL.revokeObjectURL(files[index].preview);
+    }
     setFiles((prev) => prev.filter((_, i) => i !== index));
     setError("");
   };
@@ -68,7 +99,7 @@ const ImageUpload = ({ files, setFiles, maxFiles = 3 }) => {
           {files.map((file, index) => (
             <div key={index} className="relative group rounded-xl overflow-hidden shadow-sm border border-slate-200 aspect-video bg-slate-100 flex items-center justify-center">
               <img
-                src={URL.createObjectURL(file)}
+                src={file.preview || URL.createObjectURL(file)}
                 alt={`Preview ${index}`}
                 className="object-cover w-full h-full"
               />

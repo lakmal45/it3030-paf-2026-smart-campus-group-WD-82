@@ -7,10 +7,14 @@ import api from "./api";
  */
 const ticketService = {
   /**
-   * Fetch all tickets. Pass a status string to filter (e.g. "OPEN").
+   * Fetch all tickets. Pass status, category, or priority to filter.
    */
-  getAll: (status) => {
-    const params = status ? { status } : {};
+  getAll: (status, category, priority, keyword, page = 0, size = 20) => {
+    const params = { page, size };
+    if (status && status !== "All") params.status = status;
+    if (category && category !== "All") params.category = category;
+    if (priority && priority !== "All") params.priority = priority;
+    if (keyword) params.keyword = keyword;
     return api.get("/tickets", { params });
   },
 
@@ -20,6 +24,9 @@ const ticketService = {
   /** Create a new ticket. */
   create: (data) => api.post("/tickets", data),
 
+  /** Update an existing ticket (location, description, etc.). */
+  update: (id, data) => api.put(`/tickets/${id}`, data),
+
   /** Update a ticket's status (and optionally resolution notes). */
   updateStatus: (id, status, resolutionNotes) =>
     api.put(`/tickets/${id}/status`, { status, resolutionNotes }),
@@ -28,7 +35,7 @@ const ticketService = {
   assign: (id, technicianId) =>
     api.put(`/tickets/${id}/assign`, { technicianId }),
 
-  /** Hard-delete a ticket (ADMIN only). */
+  /** Hard-delete a ticket (all roles — authorization enforced server-side). */
   deleteTicket: (id) => api.delete(`/tickets/${id}`),
 
   /**
@@ -44,8 +51,9 @@ const ticketService = {
     });
   },
 
-  /** Fetch all comments for a ticket. */
-  getComments: (id) => api.get(`/tickets/${id}/comments`),
+  /** Fetch comments for a ticket with pagination. */
+  getComments: (id, page = 0, size = 10) =>
+    api.get(`/tickets/${id}/comments`, { params: { page, size } }),
 
   /** Add a comment to a ticket. */
   addComment: (id, content) =>
@@ -58,6 +66,13 @@ const ticketService = {
   /** Delete a comment (author or ADMIN only). */
   deleteComment: (ticketId, commentId) =>
     api.delete(`/tickets/${ticketId}/comments/${commentId}`),
+
+  /** Fetch all technicians (ADMIN only). */
+  getTechnicians: () => api.get("/admin/technicians"),
+
+  /** Submit user rating and feedback for a resolved ticket. */
+  submitFeedback: (id, rating, userFeedback) =>
+    api.put(`/tickets/${id}/feedback`, { rating, userFeedback }),
 };
 
 export default ticketService;

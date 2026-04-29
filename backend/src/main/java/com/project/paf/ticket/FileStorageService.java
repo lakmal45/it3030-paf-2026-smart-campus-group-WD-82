@@ -1,63 +1,110 @@
 package com.project.paf.ticket;
 
+import net.coobird.thumbnailator.Thumbnails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * Service for persisting uploaded image files to the local filesystem.
- *
- * <p>The upload root directory is configured via {@code file.upload-dir}
- * in {@code application.properties}.
+ * Service for handling image uploads, applying compression, and storing images in Supabase Storage.
  */
 @Service
 public class FileStorageService {
 
     private static final Logger log = LoggerFactory.getLogger(FileStorageService.class);
 
-    private final Path uploadRoot;
+    @Value("${supabase.url}")
+    private String supabaseUrl;
 
-    public FileStorageService(@Value("${file.upload-dir}") String uploadDir) {
-        this.uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
-        try {
-            Files.createDirectories(this.uploadRoot);
-            log.info("File upload directory ready: {}", this.uploadRoot);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not create upload directory: " + this.uploadRoot, e);
-        }
-    }
+    @Value("${supabase.service-role-key}")
+    private String supabaseKey;
+
+    private static final List<String> ALLOWED_MIME_TYPES = Arrays.asList("image/jpeg", "image/png", "image/webp");
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     /**
-     * Saves a {@link MultipartFile} to disk under the configured upload directory.
+     * Compresses and uploads a {@link MultipartFile} to Supabase Storage.
      *
      * @param file the multipart file to save
-     * @return the relative path string that can be stored in the database
-     * @throws RuntimeException if the file cannot be written
+     * @return the public URL of the uploaded file
      */
     public String store(MultipartFile file) {
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType)) {
+            throw new IllegalArgumentException("Only JPEG, PNG, and WebP images are allowed.");
+        }
+
         String originalFilename = file.getOriginalFilename();
         String extension = "";
         if (originalFilename != null && originalFilename.contains(".")) {
             extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        } else {
+            // Determine extension from content type if missing
+            switch (contentType) {
+                case "image/jpeg": extension = ".jpg"; break;
+                case "image/png": extension = ".png"; break;
+                case "image/webp": extension = ".webp"; break;
+            }
         }
+        
         String filename = UUID.randomUUID() + extension;
-        Path destination = this.uploadRoot.resolve(filename).normalize();
+        String bucketUrl = supabaseUrl + "/storage/v1/object/ticket-images/" + filename;
+
         try {
-            file.transferTo(destination);
-            // Store as a relative path so it is portable across environments
-            String relativePath = "uploads/tickets/" + filename;
-            log.info("Stored file: {}", relativePath);
-            return relativePath;
+            // 1. Compress Image
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            Thumbnails.of(file.getInputStream())
+                    .size(1080, 1080) // Thumbnailator uses size() to define box limits
+                    .outputQuality(0.85)
+                    .keepAspectRatio(true)
+                    .toOutputStream(outputStream);
+            byte[] imageBytes = outputStream.toByteArray();
+
+            log.info("Compressed image: {} KB (Original: {} KB)", 
+                    imageBytes.length / 1024, file.getSize() / 1024);
+
+            // 2. Upload to Supabase
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + supabaseKey);
+            headers.set("Content-Type", contentType);
+
+            HttpEntity<byte[]> requestEntity = new HttpEntity<>(imageBytes, headers);
+            
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(bucketUrl, java.util.Objects.requireNonNull(HttpMethod.POST), requestEntity, String.class);
+                if (!response.getStatusCode().is2xxSuccessful()) {
+                    throw new RuntimeException("Supabase upload failed status: " + response.getStatusCode());
+                }
+            } catch (org.springframework.web.client.HttpStatusCodeException e) {
+                log.error("Supabase Error Response: {}", e.getResponseBodyAsString());
+                throw new RuntimeException("Supabase storage error: " + e.getResponseBodyAsString(), e);
+            }
+
+            // 3. Construct Public URL
+            String publicUrl = supabaseUrl + "/storage/v1/object/public/ticket-images/" + filename;
+            log.info("Stored file at: {}", publicUrl);
+            return publicUrl;
+
         } catch (IOException e) {
-            throw new RuntimeException("Failed to store file " + filename, e);
+            log.error("IO Exception during image processing", e);
+            throw new RuntimeException("Failed to process image file: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Unexpected error during Supabase upload", e);
+            throw new RuntimeException("Error communicating with Supabase: " + e.getMessage(), e);
         }
     }
 }

@@ -1,10 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
-import { changePassword, deleteAccount } from "../services/userService";
+import {
+  changePassword,
+  deleteAccount,
+  updateNotificationPrefs,
+} from "../services/userService";
 import {
   Lock,
   Trash2,
   Bell,
+  BellRing,
   Sun,
   Moon,
   CheckCircle2,
@@ -12,13 +18,15 @@ import {
   X,
   Loader2,
   KeyRound,
+  Mail,
+  Wrench,
 } from "lucide-react";
 
 /**
  * Settings page component: Handles user-specific configurations and security.
  */
 const Settings = () => {
-  const { user, logout } = useAuth();
+  const { user, setUser, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -31,12 +39,27 @@ const Settings = () => {
     confirmPassword: "",
   });
 
-  // Mock settings state
+  // Notification preferences state
   const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
+    email: user?.emailNotificationsEnabled ?? true,
+    push: user?.pushNotificationsEnabled ?? true,
     maintenance: true,
   });
+  // Per-key saving / feedback state
+  const [notifSaving, setNotifSaving] = useState({});
+  const [notifSuccess, setNotifSuccess] = useState({});
+  const [notifError, setNotifError] = useState({});
+
+  // Keep toggles in sync if the user object updates (e.g. after re-login)
+  useEffect(() => {
+    if (user) {
+      setNotifications((prev) => ({
+        ...prev,
+        email: user.emailNotificationsEnabled ?? true,
+        push: user.pushNotificationsEnabled ?? true,
+      }));
+    }
+  }, [user]);
 
   const isGoogleUser = !user?.password;
 
@@ -66,6 +89,46 @@ const Settings = () => {
       setError(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Handles toggling a notification preference.
+   * For "email" and "push", persists the change to the backend.
+   * Each key has its own independent saving/success/error state.
+   */
+  const handleNotificationToggle = async (key) => {
+    const newValue = !notifications[key];
+    setNotifications({ ...notifications, [key]: newValue });
+
+    if (key === "email" || key === "push") {
+      setNotifSaving((prev) => ({ ...prev, [key]: true }));
+      setNotifSuccess((prev) => ({ ...prev, [key]: null }));
+      setNotifError((prev) => ({ ...prev, [key]: null }));
+      try {
+        const updatedUser = await updateNotificationPrefs({
+          [key === "email" ? "emailNotificationsEnabled" : "pushNotificationsEnabled"]: newValue,
+        });
+        // Sync context + localStorage so the value survives a page refresh
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        const label = key === "email" ? "Email" : "Push";
+        setNotifSuccess((prev) => ({
+          ...prev,
+          [key]: newValue ? `${label} notifications enabled.` : `${label} notifications disabled.`,
+        }));
+        setTimeout(() => setNotifSuccess((prev) => ({ ...prev, [key]: null })), 3000);
+      } catch (err) {
+        // Revert toggle on failure
+        setNotifications((prev) => ({ ...prev, [key]: !newValue }));
+        setNotifError((prev) => ({
+          ...prev,
+          [key]: typeof err === "string" ? err : "Could not save preference.",
+        }));
+        setTimeout(() => setNotifError((prev) => ({ ...prev, [key]: null })), 4000);
+      } finally {
+        setNotifSaving((prev) => ({ ...prev, [key]: false }));
+      }
     }
   };
 
@@ -220,47 +283,65 @@ const Settings = () => {
             </h2>
           </div>
 
-          <div className="p-8 space-y-4">
+          <div className="p-8 space-y-2">
             {[
               {
                 id: "email",
                 title: "Email Notifications",
-                desc: "Receive updates about your bookings and assignments via email.",
+                desc: "Receive ticket updates, comments, and bookings confirmations via email.",
+                icon: <Mail size={15} className="text-indigo-400" />,
               },
               {
                 id: "push",
                 title: "Push Notifications",
                 desc: "Get real-time browser alerts when there are important updates.",
+                icon: <BellRing size={15} className="text-indigo-400" />,
               },
               {
                 id: "maintenance",
                 title: "Maintenance Alerts",
                 desc: "Notify me about scheduled system maintenance and downtime.",
+                icon: <Wrench size={15} className="text-indigo-400" />,
               },
             ].map((pref) => (
               <div
                 key={pref.id}
-                className="flex justify-between items-center p-4 rounded-2xl hover:bg-slate-50 transition-colors group"
+                className="rounded-2xl hover:bg-slate-50 transition-colors group"
               >
-                <div className="flex-1">
-                  <h4 className="font-bold text-slate-800">{pref.title}</h4>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
-                    {pref.desc}
-                  </p>
+                {/* Row */}
+                <div className="flex justify-between items-center p-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-1.5">
+                      {pref.icon}
+                      <h4 className="font-bold text-slate-800">{pref.title}</h4>
+                      {notifSaving[pref.id] && (
+                        <span className="flex items-center gap-1 text-xs text-slate-400 ml-2">
+                          <Loader2 size={12} className="animate-spin" />
+                          Saving…
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                      {pref.desc}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleNotificationToggle(pref.id)}
+                    disabled={notifSaving[pref.id]}
+                    aria-pressed={notifications[pref.id]}
+                    aria-label={`${pref.title} toggle`}
+                    className={`w-12 h-6 rounded-full relative transition-all duration-300 disabled:opacity-60 ${
+                      notifications[pref.id] ? "bg-indigo-600" : "bg-slate-200"
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-sm ${
+                        notifications[pref.id] ? "left-7" : "left-1"
+                      }`}
+                    />
+                  </button>
                 </div>
-                <button
-                  onClick={() =>
-                    setNotifications({
-                      ...notifications,
-                      [pref.id]: !notifications[pref.id],
-                    })
-                  }
-                  className={`w-12 h-6 rounded-full relative transition-all duration-300 ${notifications[pref.id] ? "bg-indigo-600" : "bg-slate-200"}`}
-                >
-                  <div
-                    className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-sm ${notifications[pref.id] ? "left-7" : "left-1"}`}
-                  />
-                </button>
+
               </div>
             ))}
           </div>
@@ -290,6 +371,37 @@ const Settings = () => {
           </div>
         </section>
       </div>
+
+      {/* Toast Notifications for Preferences */}
+      {createPortal(
+        <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none">
+          {Object.entries(notifSuccess).map(([key, msg]) => {
+            if (!msg) return null;
+            return (
+              <div key={`success-${key}`} className="bg-emerald-500 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-up min-w-[300px] pointer-events-auto">
+                <CheckCircle2 size={20} className="text-white" />
+                <span className="font-bold text-sm flex-1">{msg}</span>
+                <button onClick={() => setNotifSuccess(prev => ({...prev, [key]: null}))} className="text-emerald-100 hover:text-white transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+            );
+          })}
+          {Object.entries(notifError).map(([key, msg]) => {
+            if (!msg) return null;
+            return (
+              <div key={`error-${key}`} className="bg-rose-500 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-up min-w-[300px] pointer-events-auto">
+                <AlertTriangle size={20} className="text-white" />
+                <span className="font-bold text-sm flex-1">{msg}</span>
+                <button onClick={() => setNotifError(prev => ({...prev, [key]: null}))} className="text-rose-100 hover:text-white transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+            );
+          })}
+        </div>,
+        document.body
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

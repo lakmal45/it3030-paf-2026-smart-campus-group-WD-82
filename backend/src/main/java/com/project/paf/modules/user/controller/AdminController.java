@@ -1,5 +1,8 @@
 package com.project.paf.modules.user.controller;
 
+import com.project.paf.modules.auditlog.AuditAction;
+import com.project.paf.modules.auditlog.AuditLogService;
+import com.project.paf.modules.notification.service.EmailService;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
@@ -7,6 +10,7 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -22,10 +26,15 @@ public class AdminController {
 
     private final UserRepository repo;
     private final PasswordEncoder encoder;
+    private final AuditLogService auditLogService;
+    private final EmailService emailService;
 
-    public AdminController(UserRepository repo, PasswordEncoder encoder) {
+    public AdminController(UserRepository repo, PasswordEncoder encoder,
+                           AuditLogService auditLogService, EmailService emailService) {
         this.repo = repo;
         this.encoder = encoder;
+        this.auditLogService = auditLogService;
+        this.emailService = emailService;
     }
 
     /**
@@ -68,32 +77,65 @@ public class AdminController {
         return ResponseEntity.ok(repo.findAll());
     }
 
+    // ── GET all technicians ───────────────────────────────────────────────────
+    @GetMapping("/technicians")
+    public ResponseEntity<List<User>> getTechnicians(
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
+
+        requireAdmin(session, emailHeader);
+        return ResponseEntity.ok(repo.findByRole(Role.TECHNICIAN));
+    }
+
     // ── UPDATE user role ──────────────────────────────────────────────────────
     @PutMapping("/users/{id}/role")
     public ResponseEntity<User> updateUserRole(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @RequestParam Role role,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
         requireAdmin(session, emailHeader);
 
-        User user = repo.findById(id)
+        User user = repo.findById(java.util.Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         user.setRole(role);
-        return ResponseEntity.ok(repo.save(user));
+        User saved = repo.save(user);
+
+        // Resolve acting admin for audit
+        User admin = resolveActingUser(session, emailHeader);
+        auditLogService.log(AuditAction.USER_ROLE_CHANGED, admin,
+                "User '" + user.getName() + "' (" + user.getEmail() + ") role changed to " + role,
+                "User", id);
+
+        // Send email and in-app notification to the user about their role change
+        emailService.notifyRoleChanged(saved, saved.getRole().name());
+
+        return ResponseEntity.ok(saved);
     }
 
     // ── DELETE user ───────────────────────────────────────────────────────────
     @DeleteMapping("/users/{id}")
     public ResponseEntity<Void> deleteUser(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
         requireAdmin(session, emailHeader);
-        repo.deleteById(id);
+
+        User user = repo.findById(java.util.Objects.requireNonNull(id))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        String deletedName = user.getName();
+        String deletedEmail = user.getEmail();
+
+        repo.deleteById(java.util.Objects.requireNonNull(id));
+
+        User admin = resolveActingUser(session, emailHeader);
+        auditLogService.log(AuditAction.USER_DELETED, admin,
+                "User '" + deletedName + "' (" + deletedEmail + ") deleted",
+                "User", id);
+
         return ResponseEntity.noContent().build();
     }
 
@@ -110,8 +152,13 @@ public class AdminController {
         String email = body.get("email");
         String role  = body.get("role");
 
-        if (name == null || name.isBlank() || email == null || email.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name and email are required");
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
+        }
+
+        // If name was not provided, derive it from the email prefix (e.g. "john.doe" from "john.doe@uni.edu")
+        if (name == null || name.isBlank()) {
+            name = email.contains("@") ? email.substring(0, email.indexOf("@")) : email;
         }
 
         // Check duplicate email
@@ -130,13 +177,21 @@ public class AdminController {
 
         User saved = repo.save(user);
 
-        // Return saved user info + the plain-text password (shown once to admin)
+        // Email the temporary password directly to the new user — admin never sees it
+        emailService.notifyAdminCreatedUser(
+                saved.getName(), saved.getEmail(), plainPassword, saved.getRole().name());
+
+        // Return only safe fields — password is NOT included in the response
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("id", saved.getId());
         response.put("name", saved.getName());
         response.put("email", saved.getEmail());
         response.put("role", saved.getRole().name());
-        response.put("generatedPassword", plainPassword);
+
+        User admin = resolveActingUser(session, emailHeader);
+        auditLogService.log(AuditAction.USER_CREATED, admin,
+                "New user '" + saved.getName() + "' (" + saved.getEmail() + ") created with role " + saved.getRole(),
+                "User", saved.getId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -150,5 +205,18 @@ public class AdminController {
             sb.append(chars.charAt(random.nextInt(chars.length())));
         }
         return sb.toString();
+    }
+
+    /**
+     * Resolves the acting user from session or header WITHOUT enforcing admin role.
+     * Used to supply the actor to audit log entries after requireAdmin() has already passed.
+     */
+    private User resolveActingUser(HttpSession session, String emailHeader) {
+        Object attr = session.getAttribute("user");
+        if (attr instanceof User u) return u;
+        if (emailHeader != null && !emailHeader.isBlank()) {
+            return repo.findByEmail(emailHeader).orElse(null);
+        }
+        return null;
     }
 }

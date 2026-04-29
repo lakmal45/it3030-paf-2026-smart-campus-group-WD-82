@@ -11,6 +11,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/user")
 @CrossOrigin(origins = "http://localhost:5173")
+@SuppressWarnings("null")
 public class UserController {
 
     private final UserService userService;
@@ -34,7 +35,7 @@ public class UserController {
         if (currentUser == null) {
             return ResponseEntity.status(401).body("Not logged in");
         }
-        User updatedUser = userService.updateUser(currentUser.getId(), updateData);
+        User updatedUser = userService.updateUser(java.util.Objects.requireNonNull(currentUser.getId()), updateData);
         session.setAttribute("user", updatedUser);
         return ResponseEntity.ok(updatedUser);
     }
@@ -50,11 +51,29 @@ public class UserController {
         String newPassword = request.get("newPassword");
         
         try {
-            userService.changePassword(currentUser.getId(), oldPassword, newPassword);
+            userService.changePassword(java.util.Objects.requireNonNull(currentUser.getId()), oldPassword, newPassword);
             return ResponseEntity.ok("Password updated successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @PutMapping("/me/notifications")
+    public ResponseEntity<?> updateNotificationPrefs(@RequestBody Map<String, Object> request, HttpSession session) {
+        User currentUser = (User) session.getAttribute("user");
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body("Not logged in");
+        }
+        // Pass null for any key not in the request — the service will keep the existing DB value
+        Boolean emailEnabled = request.containsKey("emailNotificationsEnabled")
+                ? Boolean.TRUE.equals(request.get("emailNotificationsEnabled"))
+                : null;
+        Boolean pushEnabled = request.containsKey("pushNotificationsEnabled")
+                ? Boolean.TRUE.equals(request.get("pushNotificationsEnabled"))
+                : null;
+        User updatedUser = userService.updateNotificationPrefs(java.util.Objects.requireNonNull(currentUser.getId()), emailEnabled, pushEnabled);
+        session.setAttribute("user", updatedUser);
+        return ResponseEntity.ok(updatedUser);
     }
 
     @DeleteMapping("/me")
@@ -63,7 +82,7 @@ public class UserController {
         if (currentUser == null) {
             return ResponseEntity.status(401).body("Not logged in");
         }
-        userService.deleteUser(currentUser.getId());
+        userService.deleteUser(java.util.Objects.requireNonNull(currentUser.getId()), currentUser);
         session.invalidate();
         return ResponseEntity.ok("Account deleted successfully");
     }

@@ -1,19 +1,31 @@
 package com.project.paf.ticket;
-import jakarta.servlet.http.HttpSession;
+import java.util.List;
+import org.springframework.lang.NonNull;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
 import com.project.paf.modules.user.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * REST controller for the Maintenance & Incident Ticketing System.
@@ -23,6 +35,7 @@ import java.util.List;
  * <p>Authentication is enforced at the SecurityConfig level.
  * Fine-grained role checks use {@code @PreAuthorize} or are delegated to the service.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/tickets")
 public class TicketController {
@@ -60,21 +73,41 @@ public class TicketController {
      * ADMIN/TECHNICIAN: all tickets. USER: own tickets only.
      */
     @GetMapping
-    public ResponseEntity<List<TicketResponse>> getAllTickets(
+    public ResponseEntity<org.springframework.data.domain.Page<TicketResponse>> getAllTickets(
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
         User currentUser = resolveUser(session, emailHeader);
-        return ResponseEntity.ok(ticketService.getAllTickets(status, currentUser));
+        return ResponseEntity.ok(ticketService.getAllTickets(status, category, priority, keyword, page, size, currentUser));
     }
 
     /**
      * GET /api/tickets/{id} — Get a single ticket by ID.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<TicketResponse> getTicketById(@PathVariable Long id) {
+    public ResponseEntity<TicketResponse> getTicketById(@PathVariable @NonNull Long id) {
         return ResponseEntity.ok(ticketService.getTicketById(id));
+    }
+
+    /**
+     * PUT /api/tickets/{id} — Update ticket details (location, description, etc.).
+     * Only the creator (if OPEN) or an ADMIN can call this.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<TicketResponse> updateTicket(
+            @PathVariable @NonNull Long id,
+            @Valid @RequestBody UpdateTicketRequest request,
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
+
+        User currentUser = resolveUser(session, emailHeader);
+        return ResponseEntity.ok(ticketService.updateTicket(id, request, currentUser));
     }
 
     /**
@@ -83,7 +116,7 @@ public class TicketController {
      */
     @PutMapping("/{id}/status")
     public ResponseEntity<TicketResponse> updateTicketStatus(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @Valid @RequestBody UpdateTicketStatusRequest request,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
@@ -94,12 +127,11 @@ public class TicketController {
     }
 
     /**
-     * PUT /api/tickets/{id}/assign — Assign a technician to a ticket.
-     * Only ADMIN may call this endpoint.
+     * PUT /api/tickets/{id}/assign — Assign a ticket to a technician.
      */
     @PutMapping("/{id}/assign")
     public ResponseEntity<TicketResponse> assignTechnician(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @Valid @RequestBody AssignTechnicianRequest request,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
@@ -107,21 +139,35 @@ public class TicketController {
         User currentUser = resolveUser(session, emailHeader);
         requireRoles(currentUser, Role.ADMIN);
         return ResponseEntity.ok(
-                ticketService.assignTechnician(id, request.getTechnicianId(), currentUser));
+                ticketService.assignTechnician(id, java.util.Objects.requireNonNull(request.getTechnicianId()), currentUser));
+    }
+
+    /**
+     * PUT /api/tickets/{id}/feedback — Submit user rating and feedback.
+     * Only the ticket creator may call this endpoint for RESOLVED/CLOSED tickets.
+     */
+    @PutMapping("/{id}/feedback")
+    public ResponseEntity<TicketResponse> submitFeedback(
+            @PathVariable @NonNull Long id,
+            @Valid @RequestBody SubmitFeedbackRequest request,
+            HttpSession session,
+            @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
+
+        User currentUser = resolveUser(session, emailHeader);
+        return ResponseEntity.ok(ticketService.submitFeedback(id, request, currentUser));
     }
 
     /**
      * DELETE /api/tickets/{id} — Hard-delete a ticket.
-     * Only ADMIN may call this endpoint.
+     * Authorization is enforced in the service layer (all roles can delete with rules).
      */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ResponseEntity<Void> deleteTicket(
-            @PathVariable Long id, 
+            @PathVariable @NonNull Long id, 
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
         User currentUser = resolveUser(session, emailHeader);
-        requireRoles(currentUser, Role.ADMIN);
         ticketService.deleteTicket(id, currentUser);
         return ResponseEntity.noContent().build();
     }
@@ -132,7 +178,7 @@ public class TicketController {
      */
     @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<TicketResponse> uploadImages(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @RequestParam("files") List<MultipartFile> files) {
 
         return ResponseEntity.ok(ticketService.uploadImages(id, files));
@@ -146,8 +192,11 @@ public class TicketController {
      * GET /api/tickets/{id}/comments — List all comments for a ticket.
      */
     @GetMapping("/{id}/comments")
-    public ResponseEntity<List<CommentResponse>> getComments(@PathVariable Long id) {
-        return ResponseEntity.ok(ticketService.getComments(id));
+    public ResponseEntity<org.springframework.data.domain.Page<CommentResponse>> getComments(
+            @PathVariable @org.springframework.lang.NonNull Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ticketService.getComments(id, page, size));
     }
 
     /**
@@ -156,7 +205,7 @@ public class TicketController {
      */
     @PostMapping("/{id}/comments")
     public ResponseEntity<CommentResponse> addComment(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @Valid @RequestBody CommentRequest request,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
@@ -172,8 +221,8 @@ public class TicketController {
      */
     @PutMapping("/{ticketId}/comments/{commentId}")
     public ResponseEntity<CommentResponse> editComment(
-            @PathVariable Long ticketId,
-            @PathVariable Long commentId,
+            @PathVariable @NonNull Long ticketId,
+            @PathVariable @NonNull Long commentId,
             @Valid @RequestBody CommentRequest request,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
@@ -189,8 +238,8 @@ public class TicketController {
     @DeleteMapping("/{ticketId}/comments/{commentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ResponseEntity<Void> deleteComment(
-            @PathVariable Long ticketId,
-            @PathVariable Long commentId,
+            @PathVariable @NonNull Long ticketId,
+            @PathVariable @NonNull Long commentId,
             HttpSession session,
             @RequestHeader(value = "X-User-Email", required = false) String emailHeader) {
 
@@ -238,5 +287,43 @@ public class TicketController {
         if (!hasRole) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized: Role not matching.");
         }
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<java.util.Map<String, String>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.error("Validation error: {}", ex.getMessage());
+        java.util.Map<String, String> body = new java.util.HashMap<>();
+        body.put("error", "Validation Failed");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    public ResponseEntity<java.util.Map<String, String>> handleValidationExceptions(org.springframework.web.bind.MethodArgumentNotValidException ex) {
+        log.error("MethodArgumentNotValidException: {}", ex.getMessage());
+        java.util.Map<String, String> body = new java.util.HashMap<>();
+        body.put("error", "Validation Failed");
+        body.put("message", ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                .reduce((a, b) -> a + ", " + b).orElse("Invalid request"));
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<java.util.Map<String, String>> handleResponseStatusException(ResponseStatusException ex) {
+        log.error("Response Status Error: {}", ex.getMessage());
+        java.util.Map<String, String> body = new java.util.HashMap<>();
+        body.put("error", ex.getReason() != null ? ex.getReason() : "Error");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(ex.getStatusCode()).body(body);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<java.util.Map<String, String>> handleAllExceptions(Exception ex) {
+        log.error("Internal Server Error: ", ex);
+        java.util.Map<String, String> body = new java.util.HashMap<>();
+        body.put("error", "Internal Server Error");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import StatusBadge from "./StatusBadge";
-import { Clock, MapPin, AlertCircle, ChevronRight, Filter } from "lucide-react";
+import { Clock, MapPin, AlertCircle, ChevronRight, Filter, Search } from "lucide-react";
 
 /**
  * Renders a list of tickets as cards.
@@ -10,49 +10,128 @@ import { Clock, MapPin, AlertCircle, ChevronRight, Filter } from "lucide-react";
 const TicketList = ({ fetchTickets, title, showCreateButton = false, createPath = "", emptyMessage = "No tickets found." }) => {
   const [tickets, setTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMoreLoading, setIsMoreLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [filter, setFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [error, setError] = useState(null);
 
-  const loadData = async (statusFilter = "") => {
-    setIsLoading(true);
+  const loadData = async (statusFilter = "", catFilter = "", prioFilter = "", keyword = "", pageNum = 0, append = false) => {
+    if (append) {
+      setIsMoreLoading(true);
+    } else {
+      setIsLoading(true);
+      setPage(0);
+    }
     setError(null);
+
     try {
-      const { data } = await fetchTickets(statusFilter);
-      setTickets(data);
+      const { data } = await fetchTickets(statusFilter, catFilter, prioFilter, keyword, pageNum, 20);
+      
+      // Handle Spring Data Page response format
+      const newTickets = data.content || [];
+      const isLast = data.last ?? true;
+
+      setTickets((prev) => (append ? [...prev, ...newTickets] : newTickets));
+      setHasMore(!isLast);
     } catch (err) {
       console.error(err);
       setError("Failed to load tickets. Please try again.");
     } finally {
       setIsLoading(false);
+      setIsMoreLoading(false);
     }
   };
 
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    loadData(filter, categoryFilter, priorityFilter, debouncedSearch, nextPage, true);
+  };
+
+  // Debounce search term
   useEffect(() => {
-    loadData(filter);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    loadData(filter, categoryFilter, priorityFilter, debouncedSearch, 0, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, categoryFilter, priorityFilter, debouncedSearch]);
 
   return (
     <div className="py-2">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
+        <div className="shrink-0">
            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">{title}</h1>
            <p className="text-slate-500 mt-1 text-sm">Track and manage service requests.</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-col 2xl:flex-row items-stretch 2xl:items-center gap-4 w-full xl:w-auto flex-1 justify-end">
           
-          <div className="relative flex-1 sm:flex-none">
+          <div className="relative flex-1 lg:max-w-sm">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by description or location..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm"
+            />
+          </div>
+
+          <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 mt-2 2xl:mt-0 w-full lg:w-auto">
+            <div className="relative flex-none">
             <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="w-full sm:w-40 pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 appearance-none shadow-sm cursor-pointer"
+              className="w-36 pl-9 pr-7 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 appearance-none shadow-sm cursor-pointer"
             >
               <option value="">All Statuses</option>
               <option value="OPEN">Open</option>
-              <option value="IN_PROGRESS">In Progress</option>
+              <option value="IN_PROGRESS">In Prog</option>
               <option value="RESOLVED">Resolved</option>
               <option value="CLOSED">Closed</option>
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">▼</div>
+          </div>
+
+          <div className="relative flex-none">
+            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-40 pl-9 pr-7 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 appearance-none shadow-sm cursor-pointer"
+            >
+              <option value="">All Categories</option>
+              <option value="ELECTRICAL">Electrical</option>
+              <option value="PLUMBING">Plumbing</option>
+              <option value="EQUIPMENT">Equipment</option>
+              <option value="STRUCTURAL">Structural</option>
+              <option value="OTHER">Other</option>
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">▼</div>
+          </div>
+
+          <div className="relative flex-none">
+            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="w-36 pl-9 pr-7 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 appearance-none shadow-sm cursor-pointer"
+            >
+              <option value="">All Priorities</option>
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+              <option value="CRITICAL">Critical</option>
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">▼</div>
           </div>
@@ -60,11 +139,12 @@ const TicketList = ({ fetchTickets, title, showCreateButton = false, createPath 
           {showCreateButton && (
             <Link
               to={createPath}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-indigo-200 whitespace-nowrap"
+              className="px-5 py-2.5 flex-none bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-indigo-200 whitespace-nowrap text-center"
             >
               + New Ticket
             </Link>
           )}
+          </div>
         </div>
       </div>
 
@@ -87,9 +167,9 @@ const TicketList = ({ fetchTickets, title, showCreateButton = false, createPath 
            </div>
            <h3 className="text-lg font-bold text-slate-700 mb-1">No Tickets Found</h3>
            <p className="text-slate-500 text-sm max-w-sm">{emptyMessage}</p>
-           {filter && (
-             <button onClick={() => setFilter("")} className="mt-4 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
-               Clear Filter
+           {(filter || categoryFilter || priorityFilter) && (
+             <button onClick={() => { setFilter(""); setCategoryFilter(""); setPriorityFilter(""); }} className="mt-4 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+               Clear Filters
              </button>
            )}
         </div>
@@ -145,11 +225,23 @@ const TicketList = ({ fetchTickets, title, showCreateButton = false, createPath 
                    )}
                 </div>
                 <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 text-slate-400 transition-colors border border-slate-100">
-                  <ChevronRight size={18} />
+                   <ChevronRight size={18} />
                 </div>
               </div>
             </Link>
           ))}
+
+          {hasMore && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={handleLoadMore}
+                disabled={isMoreLoading}
+                className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+              >
+                {isMoreLoading ? "Loading..." : "Load More Tickets"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

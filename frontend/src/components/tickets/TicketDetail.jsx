@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ticketService from "../../services/ticketService";
 import { useAuth } from "../../context/AuthContext";
 import StatusBadge from "./StatusBadge";
 import CommentSection from "./CommentSection";
-import { ArrowLeft, Clock, MapPin, User, Tag, Key, CheckCircle2, AlertCircle, Wrench, Calendar, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, User, Tag, Key, CheckCircle2, AlertCircle, Wrench, Calendar, Trash2, Image as ImageIcon, Pencil } from "lucide-react";
+
+/**
+ * Simple in-memory cache for ticket details to provide instant loading on return.
+ */
+const detailsCache = {};
 
 /**
  * Renders full ticket details. Used by User, Admin, and Technician.
@@ -15,8 +20,8 @@ const TicketDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  const [ticket, setTicket] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [ticket, setTicket] = useState(detailsCache[id] || null);
+  const [isLoading, setIsLoading] = useState(!detailsCache[id]);
   const [error, setError] = useState(null);
   
   // Status update state
@@ -25,25 +30,45 @@ const TicketDetail = () => {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Assign technician state (ADMIN only)
+  const [technicians, setTechnicians] = useState([]);
   const [technicianId, setTechnicianId] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchTicket = async () => {
+  // Feedback state
+  const [userRating, setUserRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+
+  const fetchTicket = useCallback(async () => {
     try {
       const { data } = await ticketService.getById(id);
       setTicket(data);
       setNewStatus(data.status);
+      detailsCache[id] = data; // Update cache
     } catch (err) {
       console.error(err);
       setError("Failed to load ticket details.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
+
+  const fetchTechnicians = useCallback(async () => {
+    if (user?.role !== "ADMIN") return;
+    try {
+      const { data } = await ticketService.getTechnicians();
+      setTechnicians(data);
+    } catch (err) {
+      console.error("Failed to load technicians", err);
+    }
+  }, [user?.role]);
 
   useEffect(() => {
     fetchTicket();
-  }, [id]);
+    fetchTechnicians();
+  }, [fetchTicket, fetchTechnicians]);
 
   const handleUpdateStatus = async (e) => {
     e.preventDefault();
@@ -77,13 +102,45 @@ const TicketDetail = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this ticket? This action cannot be undone.")) return;
+    
+    setIsDeleting(true);
+    try {
+      await ticketService.deleteTicket(id);
+      navigate(-1);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete ticket");
+      setIsDeleting(false);
+    }
+  };
+
+  const handleSubmitFeedback = async (e) => {
+    e.preventDefault();
+    if (userRating === 0) {
+      alert("Please select a rating");
+      return;
+    }
+    setIsSubmittingFeedback(true);
+    try {
+      await ticketService.submitFeedback(id, userRating, feedbackText);
+      setFeedbackSuccess(true);
+      await fetchTicket();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to submit feedback");
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
   if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading ticket details...</div>;
   if (error) return <div className="p-8 text-center text-rose-500">{error}</div>;
   if (!ticket) return null;
 
   const role = user?.role || "USER";
-  const isAdmin = role === "ADMIN";
-  const isTechnician = role === "TECHNICIAN";
+  const isAdmin = role === "ADMIN" || role === "ROLE_ADMIN";
+  const isTechnician = role === "TECHNICIAN" || role === "ROLE_TECHNICIAN";
+  const isManager = role === "MANAGER" || role === "ROLE_MANAGER";
   const canUpdateStatus = isAdmin || isTechnician;
 
   // The baseUrl for uploaded files. Assuming Spring Boot runs on 8081 and serves static content.
@@ -119,6 +176,15 @@ const TicketDetail = () => {
                   </div>
                   <h1 className="text-2xl font-bold text-slate-800 tracking-tight leading-snug">{ticket.description}</h1>
                </div>
+
+                {(isAdmin || (ticket.status === 'OPEN' && ticket.createdById === user?.id)) && (
+                   <button
+                     onClick={() => navigate(`./edit`)}
+                     className="p-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-100 flex items-center gap-2 font-bold text-sm"
+                   >
+                     <Pencil size={16} /> Edit
+                   </button>
+                )}
              </div>
 
              <div className="flex flex-wrap gap-y-4 gap-x-8 pb-6 border-b border-slate-100">
@@ -193,19 +259,25 @@ const TicketDetail = () => {
                 <ImageIcon size={18} className="text-slate-400" /> Attachments
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {ticket.imageUrls.map((url, i) => (
-                  <a key={i} href={API_BASE + url} target="_blank" rel="noreferrer" className="block relative aspect-video rounded-xl overflow-hidden border border-slate-200 group bg-slate-50">
-                     <img 
-                       src={API_BASE + url} 
-                       alt={`Attachment ${i}`}
-                       className="w-full h-full object-cover px-1"
-                       onError={(e) => { e.target.src = "https://via.placeholder.com/300?text=Image+Not+Found" }}
-                     />
-                     <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                       <span className="text-white text-xs font-bold tracking-wider uppercase">View Full</span>
-                     </div>
-                  </a>
-                ))}
+                {ticket.imageUrls.map((url, i) => {
+                  const isAbsolute = url.startsWith("http");
+                  const fullUrl = isAbsolute ? url : API_BASE + url;
+                  
+                  return (
+                    <a key={i} href={fullUrl} target="_blank" rel="noreferrer" className="block relative aspect-video rounded-xl overflow-hidden border border-slate-200 group bg-slate-50">
+                       <img 
+                         src={fullUrl} 
+                         alt={`Attachment ${i}`}
+                         loading="lazy"
+                         className="w-full h-full object-cover px-1"
+                         onError={(e) => { e.target.src = "https://placehold.co/300?text=Image+Not+Found" }}
+                       />
+                       <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                         <span className="text-white text-xs font-bold tracking-wider uppercase">View Full</span>
+                       </div>
+                    </a>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -218,6 +290,76 @@ const TicketDetail = () => {
                </h3>
                <p className="text-sm text-emerald-900/80 whitespace-pre-wrap">{ticket.resolutionNotes}</p>
              </div>
+          )}
+
+          {/* Feedback Section */}
+          {['RESOLVED', 'CLOSED'].includes(ticket.status) && (
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 overflow-hidden relative">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                  <CheckCircle2 size={20} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800">Service Feedback</h3>
+              </div>
+
+              {ticket.rating ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <CheckCircle2 
+                        key={star} 
+                        size={20} 
+                        className={star <= ticket.rating ? "text-amber-500 fill-amber-500" : "text-slate-200"} 
+                      />
+                    ))}
+                    <span className="ml-3 text-sm font-bold text-slate-700">You rated this {ticket.rating}/5</span>
+                  </div>
+                  {ticket.userFeedback && (
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 italic text-slate-600 text-sm">
+                      "{ticket.userFeedback}"
+                    </div>
+                  )}
+                </div>
+              ) : ticket.createdById === user?.id ? (
+                feedbackSuccess ? (
+                  <div className="py-4 text-center">
+                    <p className="text-emerald-600 font-bold">Thank you for your feedback! It helps us improve our service.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmitFeedback} className="space-y-4">
+                    <p className="text-sm text-slate-500 mb-4">How would you rate the resolution of this ticket?</p>
+                    <div className="flex items-center gap-3">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setUserRating(star)}
+                          className={`p-2 transition-all hover:scale-110 ${userRating >= star ? "text-amber-500" : "text-slate-300"}`}
+                        >
+                          <CheckCircle2 size={32} className={userRating >= star ? "fill-amber-500" : ""} />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
+                      placeholder="Any additional comments on the service?"
+                      rows="3"
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                    ></textarea>
+                    <button
+                      type="submit"
+                      disabled={isSubmittingFeedback || userRating === 0}
+                      className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-200 disabled:opacity-50"
+                    >
+                      {isSubmittingFeedback ? "Submitting..." : "Submit Feedback"}
+                    </button>
+                  </form>
+                )
+              ) : (
+                <p className="text-sm text-slate-400 italic">No feedback provided yet by the reporter.</p>
+              )}
+            </div>
           )}
 
           {/* Comments */}
@@ -251,17 +393,22 @@ const TicketDetail = () => {
 
              {isAdmin && !['CLOSED', 'REJECTED'].includes(ticket.status) && (
                <form onSubmit={handleAssign} className="mt-6">
-                 <label className="block text-xs font-bold text-slate-600 mb-2">Reassign / Assign to ID:</label>
+                 <label className="block text-xs font-bold text-slate-600 mb-2">Assign to Technician:</label>
                  <div className="flex gap-2">
-                   <input
-                     type="number"
-                     placeholder="Tech ID"
+                   <select
                      value={technicianId}
                      onChange={(e) => setTechnicianId(e.target.value)}
-                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                   />
+                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                   >
+                     <option value="">Select Technician</option>
+                     {technicians.map(tech => (
+                       <option key={tech.id} value={tech.id}>
+                         {tech.name} (ID: {tech.id})
+                       </option>
+                     ))}
+                   </select>
                    <button
-                     disabled={isAssigning || !technicianId.trim()}
+                     disabled={isAssigning || !technicianId}
                      className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm rounded-xl transition-colors disabled:opacity-50 shadow-sm whitespace-nowrap"
                    >
                      Assign
@@ -271,7 +418,7 @@ const TicketDetail = () => {
              )}
           </div>
 
-          {canUpdateStatus && !['CLOSED', 'REJECTED'].includes(ticket.status) && (
+           {canUpdateStatus && !['CLOSED', 'REJECTED'].includes(ticket.status) && (
              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
                <h3 className="text-sm font-bold text-slate-800 mb-4 pb-4 border-b border-slate-100 uppercase tracking-widest text-center">
                  Update Status
@@ -312,7 +459,37 @@ const TicketDetail = () => {
                </form>
                <p className="text-[10px] text-slate-400 text-center mt-3 font-medium">Valid transitions are strictly enforced.</p>
              </div>
-          )}
+           )}
+
+           {/* Delete Ticket Button Section */}
+           {(() => {
+              const isCreator = ticket.createdById === user?.id;
+              const isAssignedTech = isTechnician && ticket.assignedTechnicianId === user?.id;
+              const canDelete = isAdmin || isManager || isAssignedTech || isCreator;
+
+              if (!canDelete) return null;
+
+              let helperText = "This will permanently remove the ticket.";
+              if (isAdmin) helperText = "Admin privilege: Hard delete any ticket";
+              else if (isManager) helperText = "Manager privilege: Delete any ticket";
+              else if (isAssignedTech) helperText = "Assigned technician: Delete this ticket";
+
+              return (
+                <div className="bg-rose-50 rounded-3xl p-6 border border-rose-100/50">
+                   <button
+                     onClick={handleDelete}
+                     disabled={isDeleting}
+                     className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl transition-all shadow-md shadow-rose-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                   >
+                     <Trash2 size={18} />
+                     {isDeleting ? "Deleting..." : "Delete Ticket"}
+                   </button>
+                   <p className="text-[10px] text-rose-400 text-center mt-3 font-medium">
+                     {helperText}
+                   </p>
+                </div>
+              );
+           })()}
         </div>
       </div>
     </div>

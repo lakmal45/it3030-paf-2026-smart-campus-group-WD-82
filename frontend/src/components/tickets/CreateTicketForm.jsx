@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ticketService from "../../services/ticketService";
+import resourceService from "../../services/resourceService";
 import ImageUpload from "./ImageUpload";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
@@ -18,12 +19,53 @@ const CreateTicketForm = () => {
     resourceId: "",
   });
   const [files, setFiles] = useState([]);
+  const [resources, setResources] = useState([]);
   const [status, setStatus] = useState({ type: "", message: "" }); // type: 'error' | 'success'
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Debounced search for resources
+  React.useEffect(() => {
+    if (!searchTerm.trim()) {
+      setResources([]);
+      return;
+    }
+    const delayDebounceFn = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const data = await resourceService.getFilteredResources({ name: searchTerm });
+        setResources(data);
+      } catch (err) {
+        console.error("Search failed", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleResourceChange = (e) => {
+    const resId = e.target.value;
+    if (!resId) {
+      setFormData(prev => ({ ...prev, location: "", resourceId: "" }));
+      return;
+    }
+    const selectedRes = resources.find(r => r.id.toString() === resId);
+    if (selectedRes) {
+      setFormData(prev => ({
+        ...prev,
+        location: `${selectedRes.name} - ${selectedRes.location}`,
+        resourceId: selectedRes.id.toString()
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -31,16 +73,26 @@ const CreateTicketForm = () => {
     setStatus({ type: "", message: "" });
     setIsSubmitting(true);
 
+    if (!formData.resourceId) {
+      setStatus({ type: "error", message: "Please search and select a location/room before submitting." });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       // 1. Create ticket
       const { data } = await ticketService.create(formData);
-      
-      // 2. Upload images if any
+      const createdTicketId = data.id;
+
+      // 2. Upload images in parallel if any
       if (files.length > 0) {
-        await ticketService.uploadImages(data.id, files);
+        // Since the backend handles 'files' as a list, we can still use the single uploadImages call,
+        // but if we were using multiple individual calls, we'd use Promise.all.
+        // For now, let's at least ensure we don't block UI unnecessarily.
+        await ticketService.uploadImages(createdTicketId, files);
       }
 
-      setStatus({ type: "success", message: `Ticket #${data.id} submitted successfully.` });
+      setStatus({ type: "success", message: `Ticket #${createdTicketId} submitted successfully.` });
       
       // Redirect after brief delay
       setTimeout(() => {
@@ -51,7 +103,7 @@ const CreateTicketForm = () => {
       console.error(err);
       setStatus({ 
         type: "error", 
-        message: err.response?.data?.message || err.response?.data?.error || "Failed to create ticket. Please try again." 
+        message: err.response?.data?.message || err.response?.data?.error || "An error occurred. Please try again." 
       });
       setIsSubmitting(false);
     }
@@ -76,18 +128,70 @@ const CreateTicketForm = () => {
       <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {/* Location */}
+          {/* Location / Resource Select */}
           <div className="col-span-1 md:col-span-2">
             <label className="block text-sm font-bold text-slate-700 mb-2">Location / Room <span className="text-rose-500">*</span></label>
-            <input
-              required
-              type="text"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              placeholder="e.g. Building A, Room 101"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50"
-            />
+            
+            {formData.resourceId ? (
+              /* Selected Resource View */
+              <div className="flex items-center justify-between p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+                    <CheckCircle2 size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-indigo-900 text-sm">{formData.location}</h4>
+                    <p className="text-xs text-indigo-600">Resource ID: {formData.resourceId}</p>
+                  </div>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, location: "", resourceId: "" }));
+                    setSearchTerm("");
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"
+                >
+                  Change Location
+                </button>
+              </div>
+            ) : (
+              /* Search & Select View */
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    placeholder="Search room (e.g. Lab 101, Office...)"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50"
+                  />
+                  {isSearching && (
+                    <div className="absolute right-3 top-3.5">
+                      <div className="w-4 h-4 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                </div>
+                <select
+                  required
+                  name="resourceId"
+                  value={formData.resourceId}
+                  onChange={handleResourceChange}
+                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-white"
+                >
+                  <option value="">{searchTerm ? (resources.length > 0 ? "Select from results" : "No results found") : "Start typing to search"}</option>
+                  {resources.map(res => (
+                    <option key={res.id} value={res.id}>
+                      {res.name} ({res.location})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            <p className="mt-2 text-[10px] text-slate-400 font-medium italic">
+              * Official campus locations must be selected from the resource catalogue.
+            </p>
           </div>
 
           {/* Category */}
@@ -146,17 +250,6 @@ const CreateTicketForm = () => {
                   value={formData.preferredContact}
                   onChange={handleChange}
                   placeholder="e.g. Phone number"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50"
-                />
-             </div>
-             <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Resource ID <span className="font-normal text-slate-400">(Optional)</span></label>
-                <input
-                  type="text"
-                  name="resourceId"
-                  value={formData.resourceId}
-                  onChange={handleChange}
-                  placeholder="e.g. ASSET-1024"
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50"
                 />
              </div>

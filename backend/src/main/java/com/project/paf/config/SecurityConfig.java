@@ -3,6 +3,7 @@ package com.project.paf.config;
 import java.util.Arrays;
 import java.util.List;
 
+import com.project.paf.modules.auditlog.AuditLogService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -17,6 +18,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.project.paf.modules.auth.service.OAuth2LoginSuccessHandler;
+import com.project.paf.modules.notification.service.EmailService;
 import com.project.paf.modules.user.repository.UserRepository;
 
 @Configuration
@@ -25,9 +27,14 @@ import com.project.paf.modules.user.repository.UserRepository;
 public class SecurityConfig {
 
     private final UserRepository userRepository;
+    private final EmailService emailService;
+    private final AuditLogService auditLogService;
 
-    public SecurityConfig(UserRepository userRepository) {
+    public SecurityConfig(UserRepository userRepository, EmailService emailService,
+                          AuditLogService auditLogService) {
         this.userRepository = userRepository;
+        this.emailService = emailService;
+        this.auditLogService = auditLogService;
     }
 
     @Bean
@@ -50,12 +57,14 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationFilter authenticationFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationFilter authenticationFilter)
+            throws Exception {
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
-                .addFilterBefore(authenticationFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(authenticationFilter,
+                        org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
 
                 .authorizeHttpRequests(auth -> auth
 
@@ -68,8 +77,11 @@ public class SecurityConfig {
                         // booking endpoints (auth handled manually in BookingController)
                         .requestMatchers("/api/bookings/**").permitAll()
 
-                        // Member 3 – ticket endpoints (PermitAll allows manual session + header check in controller)
+                        // Member 3 – ticket endpoints
                         .requestMatchers("/api/tickets/**").permitAll()
+                        
+                        // Resource endpoints - Manual auth handled in ResourceController
+                        .requestMatchers("/api/resources/**").permitAll()
 
                         .anyRequest().authenticated())
 
@@ -88,7 +100,7 @@ public class SecurityConfig {
 
                 .oauth2Login(oauth -> oauth
                         .defaultSuccessUrl("http://localhost:5173/dashboard", true)
-                        .successHandler(new OAuth2LoginSuccessHandler(userRepository)))
+                        .successHandler(new OAuth2LoginSuccessHandler(userRepository, emailService, auditLogService)))
 
                 .logout(logout -> logout
                         .logoutUrl("/logout")

@@ -23,7 +23,7 @@ import ConfirmationModal from "../../components/common/ConfirmationModal";
 const ResourceDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { showToast } = useToast();
   
   const [resource, setResource] = useState(null);
@@ -33,12 +33,16 @@ const ResourceDetailPage = () => {
   const [isToggling, setIsToggling] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const isAdmin = user?.role === "ADMIN" || user?.role === "ROLE_ADMIN";
-  const isManager = user?.role === "MANAGER" || user?.role === "ROLE_MANAGER";
-  const isUser = user?.role === "USER" || user?.role === "ROLE_USER"; 
+  const isAdmin = 
+    role === 'ADMIN' || 
+    role === 'ROLE_ADMIN';
   
-  // Broadening permissions to unblock Member 1's development
-  const canModify = isAdmin || isManager || isUser;
+  const isManager = 
+    role === 'MANAGER' || 
+    role === 'ROLE_MANAGER';
+  
+  // Strict RBAC: Both ADMIN and MANAGER can modify resources (Add/Edit/Delete/Status)
+  const canModify = isAdmin || isManager;
 
   useEffect(() => {
     const fetchResource = async () => {
@@ -62,9 +66,10 @@ const ResourceDetailPage = () => {
     try {
       await resourceService.delete(id);
       showToast("Resource deleted permanently", "success");
-      const basePath = isAdmin ? "/dashboard/admin" : "/dashboard/manager";
+      const basePath = "/dashboard/admin";
       navigate(`${basePath}/resources`);
-    } catch (err) {
+    } catch (error) {
+      console.error("Error deleting resource:", error);
       showToast("Failed to delete resource. Please try again.", "error");
       setIsDeleting(false);
     }
@@ -80,8 +85,9 @@ const ResourceDetailPage = () => {
       setResource(updated);
       showToast(`Resource is now ${newStatus.replace(/_/g, ' ')}`, "success");
     } catch (err) {
-      console.error("Error toggling status:", err);
-      showToast("Failed to update status. unauthorized.", "error");
+      console.error("Status update error:", err);
+      const errorMsg = err.response?.data?.message || err.message || "Unknown server error";
+      showToast(`Access Denied: ${errorMsg}. Please ensure you are logged in as admin.`, "error");
     } finally {
       setIsToggling(false);
     }
@@ -164,7 +170,7 @@ const ResourceDetailPage = () => {
             {canModify && (
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 bg-white/5 backdrop-blur-xl p-2 rounded-lg sm:rounded-2xl border border-white/10 shadow-lg sm:shadow-2xl self-start sm:self-auto">
                 <Link 
-                  to={`${isAdmin ? '/dashboard/admin' : '/dashboard/manager'}/resources/${id}/edit`} 
+                  to={`/dashboard/admin/resources/${id}/edit`} 
                   className="bg-white text-slate-900 hover:bg-slate-50 px-3 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl flex items-center justify-center transition-all font-bold text-sm sm:text-base shadow-sm active:scale-95"
                 >
                   <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" /> Modify
@@ -210,9 +216,9 @@ const ResourceDetailPage = () => {
                 <div className="bg-emerald-500 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-lg shadow-emerald-100 flex-shrink-0">
                   <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
-                <div>
-                  <h4 className="text-[9px] sm:text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Operating Hours</h4>
-                  <p className="text-slate-900 font-bold text-sm sm:text-base lg:text-lg leading-tight">{resource.availabilityWindows || "24/7 Availability"}</p>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Availability</span>
+                  <span className="text-slate-900 font-bold text-sm sm:text-base lg:text-lg leading-tight">{resource.availabilityWindows || "Mon-Fri 8AM-5PM"}</span>
                 </div>
               </div>
             </section>
@@ -237,39 +243,92 @@ const ResourceDetailPage = () => {
 
             <section>
               <h3 className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-4 sm:mb-6">Availability</h3>
-              <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex items-center font-black text-base sm:text-lg transition-all gap-3 ${resource.available ? 'bg-emerald-600 text-white shadow-lg sm:shadow-xl shadow-emerald-100' : 'bg-slate-200 text-slate-500'}`}>
-                {resource.available ? (
-                  <div className="flex items-center w-full gap-3">
-                    <div className="bg-white/20 p-2 rounded-full flex-shrink-0">
-                      <div className="w-2.5 h-2.5 bg-white rounded-full animate-ping"></div>
+              {resource.available && resource.status === 'ACTIVE' ? (
+                <button
+                  onClick={() => navigate("/dashboard/user/create-booking", { state: { resourceName: resource.name } })}
+                  className="w-full p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex items-center justify-center font-black text-base sm:text-lg transition-all gap-3 bg-emerald-600 text-white shadow-lg sm:shadow-xl shadow-emerald-100 hover:bg-emerald-700 active:scale-95"
+                >
+                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6" /> BOOK THIS RESOURCE
+                </button>
+              ) : (
+                <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex items-center font-black text-base sm:text-lg transition-all gap-3 ${resource.available ? 'bg-emerald-600/50 text-white/80' : 'bg-slate-200 text-slate-500'}`}>
+                  {resource.available ? (
+                    <div className="flex items-center w-full gap-3">
+                      <div className="flex flex-col">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                        <div className={`px-3 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1.5 ${
+                          resource.status === 'ACTIVE' 
+                            ? 'bg-emerald-50 text-emerald-600' 
+                            : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${resource.status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
+                          {resource.status}
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-sm sm:text-base">READY FOR USE</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center w-full gap-3">
-                    <div className="bg-slate-300 p-2 rounded-full flex-shrink-0">
-                      <div className="w-2.5 h-2.5 bg-slate-400 rounded-full"></div>
+                  ) : (
+                    <div className="flex items-center w-full gap-3">
+                      <div className="bg-slate-300 p-2 rounded-full flex-shrink-0">
+                        <div className="w-2.5 h-2.5 bg-slate-400 rounded-full"></div>
+                      </div>
+                      <span className="text-sm sm:text-base">BOOKED / BUSY</span>
                     </div>
-                    <span className="text-sm sm:text-base">BOOKED / BUSY</span>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* Reservation Status (Visible to all for clear feedback) */}
+            <section className="pt-6 sm:pt-8 border-t border-slate-200 space-y-4">
+              <h3 className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-2">Reservation availability</h3>
+              {resource.status === 'ACTIVE' ? (
+                <div className="space-y-4">
+                  <Link 
+                    to={`/dashboard/user/create-booking?resource=${encodeURIComponent(resource.name)}`}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 sm:p-5 rounded-xl sm:rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-blue-100 font-bold active:scale-[0.98]"
+                  >
+                    <Calendar className="h-5 w-5" /> Book Now
+                  </Link>
+                  <p className="text-[10px] text-center text-slate-400 font-medium">Click to initiate a new reservation request for this space.</p>
+                </div>
+              ) : (
+                <div className="w-full bg-slate-100 text-slate-500 p-4 sm:p-5 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-2 border border-slate-200 cursor-not-allowed">
+                   <ShieldAlert className="h-6 w-6 opacity-40" />
+                   <span className="font-bold text-xs sm:text-sm text-center">Currently Unavailable</span>
+                   <p className="text-[10px] opacity-60 text-center px-4 italic leading-relaxed">Admin has suspended bookings for this resource. It is currently in {resource.status.replace(/_/g, ' ')} state.</p>
+                </div>
+              )}
             </section>
 
             {canModify && isAdmin && (
-              <section className="pt-6 sm:pt-8 border-t border-slate-200 space-y-4">
-                <h3 className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-2">Admin Controls</h3>
-                <button 
-                  onClick={handleToggleStatus}
-                  disabled={isToggling}
-                  className="group w-full bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50 p-4 sm:p-5 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 sm:gap-3 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={`Toggle to ${resource.status === 'ACTIVE' ? 'OUT_OF_SERVICE' : 'ACTIVE'}`}
-                >
-                  <ToggleLeft className={`h-5 w-5 sm:h-6 sm:w-6 transition-colors ${resource.status === 'ACTIVE' ? 'text-slate-400' : 'text-blue-600'}`} />
-                  <span className={`font-black text-sm sm:text-base tracking-tight ${resource.status === 'ACTIVE' ? 'text-slate-700' : 'text-blue-700'}`}>
-                    {isToggling ? "PROCESSING..." : `TOGGLE TO ${resource.status === 'ACTIVE' ? 'OUT OF SERVICE' : 'ACTIVE'}`}
-                  </span>
-                </button>
+              <section className="pt-6 sm:pt-8 border-t border-slate-200 space-y-4 order-first lg:order-none">
+                <h3 className="text-[10px] sm:text-xs font-black text-blue-600 uppercase tracking-[0.15em] sm:tracking-[0.2em] mb-2 font-black">Admin Management</h3>
+                <div className="bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-800 space-y-4 shadow-2xl shadow-slate-200">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-black text-white tracking-tight">System Toggle</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center">
+                        {resource.status === 'ACTIVE' ? (
+                          <><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2 animate-pulse"></span> ONLINE</>
+                        ) : (
+                          <><span className="w-1.5 h-1.5 bg-rose-500 rounded-full mr-2"></span> OFFLINE</>
+                        )}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={handleToggleStatus}
+                      disabled={isToggling}
+                      className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${resource.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-200'} ${isToggling ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <span className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-lg ring-0 transition duration-500 ease-in-out ${resource.status === 'ACTIVE' ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                  <p className="text-[10px] sm:text-xs font-medium text-slate-500 leading-relaxed italic border-t border-slate-100 pt-3">
+                    {resource.status === 'ACTIVE' 
+                      ? "Toggle to suspend this resource from the public catalogue and prevent any new reservations." 
+                      : "Restore this resource to active service, making it available for campus-wide booking."}
+                  </p>
+                </div>
               </section>
             )}
           </div>

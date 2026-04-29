@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import ticketService from "../../services/ticketService";
 import { User, Trash2, Edit2, Send, Clock } from "lucide-react";
 
@@ -12,23 +12,37 @@ const CommentSection = ({ ticketId, currentUser }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState("");
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [isMoreLoading, setIsMoreLoading] = useState(false);
 
   const isAdmin = currentUser?.role === "ADMIN";
 
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async (pageNum = 0, append = false) => {
+    if (append) setIsMoreLoading(true);
+    else setIsLoading(true);
+    
     try {
-      const { data } = await ticketService.getComments(ticketId);
-      setComments(data);
+      const { data } = await ticketService.getComments(ticketId, pageNum, 10);
+      const newComments = data.content || [];
+      setComments(prev => append ? [...prev, ...newComments] : newComments);
+      setHasMore(!data.last);
+      setPage(pageNum);
     } catch (err) {
       console.error("Failed to load comments", err);
     } finally {
       setIsLoading(false);
+      setIsMoreLoading(false);
     }
-  };
+  }, [ticketId]);
 
   useEffect(() => {
-    fetchComments();
-  }, [ticketId]);
+    fetchComments(0, false);
+  }, [fetchComments]);
+
+  const handleLoadMore = () => {
+    fetchComments(page + 1, true);
+  };
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -37,7 +51,7 @@ const CommentSection = ({ ticketId, currentUser }) => {
     try {
       await ticketService.addComment(ticketId, newComment);
       setNewComment("");
-      await fetchComments();
+      await fetchComments(0, false);
     } catch (err) {
       console.error("Failed to add comment", err);
     } finally {
@@ -71,8 +85,6 @@ const CommentSection = ({ ticketId, currentUser }) => {
     }
   };
 
-  if (isLoading) return <div className="text-sm text-slate-500 animate-pulse mt-6">Loading comments...</div>;
-
   return (
     <div className="mt-8 border-t border-slate-100 pt-8">
       <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
@@ -104,9 +116,17 @@ const CommentSection = ({ ticketId, currentUser }) => {
         </div>
       </form>
 
-      {/* Comment List */}
       <div className="space-y-6">
-        {comments.map((c) => {
+        {isLoading ? (
+          <div className="space-y-4 animate-pulse">
+            {[1, 2].map(i => (
+              <div key={i} className="flex gap-4">
+                <div className="w-10 h-10 rounded-full bg-slate-200 shrink-0"></div>
+                <div className="flex-1 bg-slate-100 h-24 rounded-2xl rounded-tl-none"></div>
+              </div>
+            ))}
+          </div>
+        ) : comments.map((c) => {
           const isOwner = c.authorId === currentUser?.id;
           const canModify = isOwner || isAdmin;
 
@@ -162,9 +182,21 @@ const CommentSection = ({ ticketId, currentUser }) => {
             </div>
           );
         })}
-        {comments.length === 0 && (
+        {!isLoading && comments.length === 0 && (
           <div className="text-center py-10 text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
             No comments yet. Start the conversation.
+          </div>
+        )}
+
+        {hasMore && (
+          <div className="flex justify-center mt-4">
+             <button
+               onClick={handleLoadMore}
+               disabled={isMoreLoading}
+               className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-4 py-2 rounded-xl transition-all disabled:opacity-50"
+             >
+               {isMoreLoading ? "Loading..." : "Load More Comments"}
+             </button>
           </div>
         )}
       </div>

@@ -1,16 +1,10 @@
 package com.project.paf.ticket;
 
-import com.project.paf.modules.user.model.User;
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
 import com.project.paf.modules.user.model.User;
-
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -23,6 +17,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -35,7 +30,13 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "incident_tickets")
+@Table(name = "incident_tickets", indexes = {
+    @Index(name = "idx_status", columnList = "status"),
+    @Index(name = "idx_category", columnList = "category"),
+    @Index(name = "idx_priority", columnList = "priority"),
+    @Index(name = "idx_created_by", columnList = "created_by_id"),
+    @Index(name = "idx_assigned_technician", columnList = "assigned_technician_id")
+})
 public class IncidentTicket {
 
     @Id
@@ -94,6 +95,17 @@ public class IncidentTicket {
 
     /** How the reporter prefers to be contacted (e.g. email, phone). */
     private String preferredContact;
+
+    /** Rating provided by the user after ticket resolution (1-5). */
+    @Column(name = "user_rating")
+    private Integer rating;
+
+    /** Feedback text provided by the user after ticket resolution. */
+    @Column(name = "user_feedback", length = 1000)
+    private String userFeedback;
+
+    @Column(name = "is_escalated", nullable = false, columnDefinition = "boolean default false")
+    private boolean isEscalated = false;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

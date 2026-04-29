@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import resourceService from "../../services/resourceService";
 import ResourceFilters from "../../components/resources/ResourceFilters";
@@ -10,20 +10,22 @@ import {
   Table, 
   LayoutGrid, 
   Eye, 
-  Edit, 
+  Pencil, 
   Trash2, 
   CheckCircle2, 
   Clock, 
   AlertTriangle,
   Building2,
   FilterX,
-  MapPin
+  MapPin,
+  ToggleRight,
+  Calendar
 } from "lucide-react";
 
 const ResourceListPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { showToast } = useToast();
   
   const [resources, setResources] = useState([]);
@@ -34,31 +36,27 @@ const ResourceListPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [resourceToDelete, setResourceToDelete] = useState(null);
 
+  const isAdmin = 
+    role === 'ADMIN' || 
+    role === 'ROLE_ADMIN';
+
+  const isManager = 
+    role === 'MANAGER' || 
+    role === 'ROLE_MANAGER';
+
   // Determine base dashboard path based on role
   const getDashboardPath = () => {
-    const role = user?.role?.toLowerCase();
-    if (role?.includes("admin")) return "/dashboard/admin";
-    if (role?.includes("manager")) return "/dashboard/manager";
+    if (isAdmin) return "/dashboard/admin";
+    if (isManager) return "/dashboard/manager";
     return "/dashboard/user";
   };
 
   const dashboardPath = getDashboardPath();
-  const isAdmin = user?.role === "ADMIN" || user?.role === "ROLE_ADMIN";
-  const isManager = user?.role === "MANAGER" || user?.role === "ROLE_MANAGER";
-  const isUser = user?.role === "USER" || user?.role === "ROLE_USER"; 
-  
-  // Broadening permissions to unblock Member 1's development
-  const canModify = isAdmin || isManager || isUser;
 
-  useEffect(() => {
-    fetchResources();
-    if (successMessage) {
-      showToast(successMessage);
-      setSuccessMessage(null);
-    }
-  }, [successMessage, showToast]);
+  // Strict RBAC: Both ADMIN and MANAGER can modify resources (Add/Edit/Delete/Status)
+  const canModify = isAdmin || isManager;
 
-  const fetchResources = async (filters = {}) => {
+  const fetchResources = useCallback(async (filters = {}) => {
     setIsLoading(true);
     try {
       // Use standard getAll if no filters are applied to avoid search parameter edge cases
@@ -75,7 +73,15 @@ const ResourceListPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchResources();
+    if (successMessage) {
+      showToast(successMessage);
+      setSuccessMessage(null);
+    }
+  }, [successMessage, showToast, fetchResources]);
 
   const handleDeleteClick = (e, resource) => {
     e.stopPropagation();
@@ -91,10 +97,25 @@ const ResourceListPage = () => {
       fetchResources();
     } catch (err) {
       console.error("Delete error:", err);
-      showToast("Action failed. Try again.", "error");
+      const msg = err.response?.data?.message || err.message || "Unknown error";
+      showToast(`Deletion failed: ${msg}`, "error");
     } finally {
       setShowDeleteModal(false);
       setResourceToDelete(null);
+    }
+  };
+  
+  const handleStatusToggle = async (e, resource) => {
+    e.stopPropagation();
+    const newStatus = resource.status === "ACTIVE" ? "OUT_OF_SERVICE" : "ACTIVE";
+    try {
+      await resourceService.updateResourceStatus(resource.id, newStatus);
+      showToast(`Status updated to ${newStatus.replace(/_/g, ' ')}`, "success");
+      fetchResources();
+    } catch (err) {
+      console.error("Status update error:", err);
+      const msg = err.response?.data?.message || err.message || "Unknown error";
+      showToast(`Toggle failed: ${msg}`, "error");
     }
   };
 
@@ -230,17 +251,41 @@ const ResourceListPage = () => {
                   </div>
                 </div>
 
+                {!isAdmin && resource.status === 'ACTIVE' && resource.available && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate("/dashboard/user/create-booking", { state: { resourceName: resource.name } });
+                      }}
+                      className="px-6 py-2 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 transition-all active:scale-95 text-xs flex items-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4" /> BOOK NOW
+                    </button>
+                  </div>
+                )}
+
                 {canModify && (
-                  <div className="flex justify-end space-x-3 opacity-0 group-hover:opacity-100 transition-all">
+                  <div className="flex justify-end items-center space-x-3 opacity-0 group-hover:opacity-100 transition-all">
+                    {/* Compact Status Toggle for cards */}
+                    <button
+                      onClick={(e) => handleStatusToggle(e, resource)}
+                      className={`p-2 rounded-lg transition-colors ${resource.status === 'ACTIVE' ? 'text-emerald-500 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-400 bg-slate-50 hover:bg-slate-100'}`}
+                      title="Toggle Status"
+                    >
+                      <ToggleRight className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={(e) => handleEditClick(e, resource.id)}
                       className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all active:scale-90"
+                      title="Edit Resource"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       onClick={(e) => handleDeleteClick(e, resource)}
                       className="p-3 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-90"
+                      title="Delete Resource"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -301,32 +346,56 @@ const ResourceListPage = () => {
                       )}
                     </td>
                     <td className="px-8 py-6 whitespace-nowrap text-right space-x-2">
-                      <button
+                       <button
                         onClick={(e) => { e.stopPropagation(); handleRowClick(resource.id); }}
                         className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all active:scale-90"
-                        title="View Full Profile"
+                        title="view"
                       >
                         <Eye className="h-5 w-5" />
                       </button>
-                      {canModify && (
+                      {!isAdmin && resource.status === 'ACTIVE' && resource.available && (
+                        <button
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            navigate("/dashboard/user/create-booking", { state: { resourceName: resource.name } }); 
+                          }}
+                          className="p-3 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all active:scale-90"
+                          title="book now"
+                        >
+                          <Calendar className="h-5 w-5" />
+                        </button>
+                      )}
+                      {isAdmin && (
                         <>
                           <button
                             onClick={(e) => handleEditClick(e, resource.id)}
                             className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-90"
-                            title="Edit Record"
+                            title="edit"
                           >
-                            <Edit className="h-5 w-5" />
+                            <Pencil className="h-5 w-5" />
                           </button>
+                          
+                          <div className="inline-flex items-center align-middle mx-1" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={(e) => handleStatusToggle(e, resource)}
+                              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${resource.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                              title={resource.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                            >
+                              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${resource.status === 'ACTIVE' ? 'translate-x-5' : 'translate-x-0'}`} />
+                            </button>
+                          </div>
+
                           <button
                             onClick={(e) => handleDeleteClick(e, resource)}
                             className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all active:scale-90"
-                            title="Purge Entry"
+                            title="delete"
                           >
                             <Trash2 className="h-5 w-5" />
                           </button>
                         </>
                       )}
                     </td>
+
                   </tr>
                 ))}
               </tbody>
