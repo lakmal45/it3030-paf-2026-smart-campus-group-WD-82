@@ -38,11 +38,6 @@ export const roleNavigation = {
     { name: "User Management", path: "/dashboard/admin/users", icon: Users },
     { name: "All Bookings", path: "/dashboard/admin/bookings", icon: Calendar },
     { name: "All Tickets", path: "/dashboard/admin/tickets", icon: Ticket },
-    {
-      name: "System Settings",
-      path: "/dashboard/admin/settings",
-      icon: Settings,
-    },
     { name: "Resources", path: "/dashboard/admin/resources", icon: Box },
     {
       name: "Activity Log",

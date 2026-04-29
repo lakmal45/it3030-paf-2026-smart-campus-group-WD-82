@@ -1,5 +1,6 @@
 package com.project.paf.ticket;
 
+import com.project.paf.modules.auditlog.AuditLogService;
 import com.project.paf.modules.resource.exception.ResourceNotFoundException;
 import com.project.paf.modules.user.model.Role;
 import com.project.paf.modules.user.model.User;
@@ -28,7 +29,6 @@ import static org.mockito.Mockito.*;
  */
 @Slf4j
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings("null")
 public class TicketServiceTest {
 
     @Mock
@@ -48,6 +48,9 @@ public class TicketServiceTest {
 
     @Mock
     private UserRepository userRepository;
+    
+    @Mock
+    private AuditLogService auditLogService;
 
     @InjectMocks
     private TicketService ticketService;
@@ -201,10 +204,11 @@ public class TicketServiceTest {
     }
 
     @Test
-    void deleteTicket_ByNonAdmin_ShouldThrowAccessDeniedException() {
-        log.info("Running deleteTicket_ByNonAdmin_ShouldThrowAccessDeniedException...");
+    void deleteTicket_ByUnrelatedUser_ShouldThrowAccessDeniedException() {
+        log.info("Running deleteTicket_ByUnrelatedUser_ShouldThrowAccessDeniedException...");
         when(ticketRepository.findById(10L)).thenReturn(Optional.of(openTicket));
 
+        // Technician who is NOT the creator and NOT assigned to this ticket should be denied
         assertThrows(AccessDeniedException.class, () -> ticketService.deleteTicket(10L, technicianUser));
     }
 

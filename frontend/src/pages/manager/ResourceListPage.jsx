@@ -18,13 +18,14 @@ import {
   Building2,
   FilterX,
   MapPin,
-  ToggleRight
+  ToggleRight,
+  Calendar
 } from "lucide-react";
 
 const ResourceListPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { showToast } = useToast();
   
   const [resources, setResources] = useState([]);
@@ -35,29 +36,25 @@ const ResourceListPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [resourceToDelete, setResourceToDelete] = useState(null);
 
-  // Robust role extraction — handles both string ("ADMIN") and object ({name:"ADMIN"}) formats
-  const getRole = () => {
-    const r = user?.role;
-    if (!r) return "";
-    if (typeof r === "string") return r.toUpperCase();
-    if (typeof r === "object" && r.name) return r.name.toUpperCase();
-    return String(r).toUpperCase();
-  };
+  const isAdmin = 
+    role === 'ADMIN' || 
+    role === 'ROLE_ADMIN';
 
-  const userRole = getRole();
-  const isAdmin = localStorage.getItem('role') === 'ADMIN' || userRole === 'ADMIN';
+  const isManager = 
+    role === 'MANAGER' || 
+    role === 'ROLE_MANAGER';
 
   // Determine base dashboard path based on role
   const getDashboardPath = () => {
-    if (userRole === "ADMIN" || isAdmin) return "/dashboard/admin";
-    if (userRole === "MANAGER") return "/dashboard/manager";
+    if (isAdmin) return "/dashboard/admin";
+    if (isManager) return "/dashboard/manager";
     return "/dashboard/user";
   };
 
   const dashboardPath = getDashboardPath();
 
-  // Strict RBAC: Only ADMIN can modify resources (Add/Edit/Delete/Status)
-  const canModify = isAdmin;
+  // Strict RBAC: Both ADMIN and MANAGER can modify resources (Add/Edit/Delete/Status)
+  const canModify = isAdmin || isManager;
 
   const fetchResources = useCallback(async (filters = {}) => {
     setIsLoading(true);
@@ -100,7 +97,8 @@ const ResourceListPage = () => {
       fetchResources();
     } catch (err) {
       console.error("Delete error:", err);
-      showToast("Action failed. Try again.", "error");
+      const msg = err.response?.data?.message || err.message || "Unknown error";
+      showToast(`Deletion failed: ${msg}`, "error");
     } finally {
       setShowDeleteModal(false);
       setResourceToDelete(null);
@@ -116,7 +114,8 @@ const ResourceListPage = () => {
       fetchResources();
     } catch (err) {
       console.error("Status update error:", err);
-      showToast("Failed to update status", "error");
+      const msg = err.response?.data?.message || err.message || "Unknown error";
+      showToast(`Toggle failed: ${msg}`, "error");
     }
   };
 
@@ -252,6 +251,20 @@ const ResourceListPage = () => {
                   </div>
                 </div>
 
+                {!isAdmin && resource.status === 'ACTIVE' && resource.available && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate("/dashboard/user/create-booking", { state: { resourceName: resource.name } });
+                      }}
+                      className="px-6 py-2 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 transition-all active:scale-95 text-xs flex items-center gap-2"
+                    >
+                      <Calendar className="h-4 w-4" /> BOOK NOW
+                    </button>
+                  </div>
+                )}
+
                 {canModify && (
                   <div className="flex justify-end items-center space-x-3 opacity-0 group-hover:opacity-100 transition-all">
                     {/* Compact Status Toggle for cards */}
@@ -340,6 +353,18 @@ const ResourceListPage = () => {
                       >
                         <Eye className="h-5 w-5" />
                       </button>
+                      {!isAdmin && resource.status === 'ACTIVE' && resource.available && (
+                        <button
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            navigate("/dashboard/user/create-booking", { state: { resourceName: resource.name } }); 
+                          }}
+                          className="p-3 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all active:scale-90"
+                          title="book now"
+                        >
+                          <Calendar className="h-5 w-5" />
+                        </button>
+                      )}
                       {isAdmin && (
                         <>
                           <button

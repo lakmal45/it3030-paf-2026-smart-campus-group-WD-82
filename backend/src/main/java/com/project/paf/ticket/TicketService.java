@@ -307,7 +307,6 @@ public class TicketService {
      * @param currentUser authenticated caller
      * @return updated ticket
      */
-    @SuppressWarnings("null")
     public TicketResponse submitFeedback(Long id, SubmitFeedbackRequest request, User currentUser) {
         IncidentTicket ticket = findTicketOrThrow(id);
 
@@ -329,29 +328,39 @@ public class TicketService {
     }
 
     /**
-     * Hard-deletes a ticket. Only ADMIN users may call this method.
+     * Hard-deletes a ticket. All roles can delete tickets with the following rules:
+     * <ul>
+     *   <li>ADMIN / MANAGER — can delete any ticket regardless of status.</li>
+     *   <li>TECHNICIAN — can delete tickets assigned to them.</li>
+     *   <li>USER (creator) — can delete their own tickets.</li>
+     * </ul>
      *
      * @param id          ticket to delete
-     * @param currentUser must be ADMIN
+     * @param currentUser the authenticated user requesting deletion
      */
     public void deleteTicket(@NonNull Long id, User currentUser) {
         IncidentTicket ticket = findTicketOrThrow(id);
-        
-        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
-        boolean isCreator = ticket.getCreatedBy() != null && Objects.equals(ticket.getCreatedBy().getId(), currentUser.getId());
-        boolean isOpen = ticket.getStatus() == TicketStatus.OPEN;
 
-        if (!isAdmin && !(isCreator && isOpen)) {
-            throw new AccessDeniedException("You are not authorized to delete this ticket. " +
-                    (isCreator ? "Tickets can only be deleted while they are OPEN." : "Only the admin or creator may delete tickets."));
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isManager = currentUser.getRole() == Role.MANAGER;
+        boolean isTechnician = currentUser.getRole() == Role.TECHNICIAN;
+        boolean isCreator = ticket.getCreatedBy() != null && Objects.equals(ticket.getCreatedBy().getId(), currentUser.getId());
+        boolean isAssignedTechnician = isTechnician && ticket.getAssignedTechnician() != null
+                && Objects.equals(ticket.getAssignedTechnician().getId(), currentUser.getId());
+
+        // ADMIN and MANAGER can always delete any ticket
+        // TECHNICIAN can delete tickets assigned to them
+        // Creator (USER) can delete their own tickets
+        if (!isAdmin && !isManager && !isAssignedTechnician && !isCreator) {
+            throw new AccessDeniedException("You are not authorized to delete this ticket.");
         }
 
         ticketRepository.delete(ticket);
-        log.info("Ticket #{} deleted by user '{}'", id, currentUser.getEmail());
+        log.info("Ticket #{} deleted by user '{}' (role: {})", id, currentUser.getEmail(), currentUser.getRole());
 
         // Audit
         auditLogService.log(AuditAction.TICKET_DELETED, currentUser,
-                "Ticket #" + id + " permanently deleted",
+                "Ticket #" + id + " permanently deleted by " + currentUser.getRole(),
                 "Ticket", id);
     }
 

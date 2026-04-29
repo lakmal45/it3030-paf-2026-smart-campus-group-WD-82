@@ -13,4 +13,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findByTargetUserOrderByCreatedAtDesc(User targetUser);
     
     long countByTargetUserAndIsReadFalse(User targetUser);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Notification n SET n.isRead = true WHERE n.targetUser = :user AND n.isRead = false")
+    void markAllAsReadForUser(@org.springframework.data.repository.query.Param("user") User user);
+
+    void deleteByIdAndTargetUser(Long id, User targetUser);
 }
