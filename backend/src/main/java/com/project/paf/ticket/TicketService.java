@@ -310,7 +310,7 @@ public class TicketService {
      * @param currentUser authenticated caller
      * @return updated ticket
      */
-    public TicketResponse submitFeedback(Long id, SubmitFeedbackRequest request, User currentUser) {
+    public TicketResponse submitFeedback(@NonNull Long id, SubmitFeedbackRequest request, User currentUser) {
         IncidentTicket ticket = findTicketOrThrow(id);
 
         boolean isCreator = ticket.getCreatedBy() != null && Objects.equals(ticket.getCreatedBy().getId(), currentUser.getId());
